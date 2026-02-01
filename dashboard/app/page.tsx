@@ -5,6 +5,8 @@ import { Task, TasksFile, Repository } from '@/lib/schemas'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -62,7 +64,7 @@ export default function Dashboard() {
               </div>
               <Skeleton className="h-5 w-96" />
             </div>
-            <Skeleton className="h-32 w-48" />
+            <Skeleton className="h-32 w-64 rounded-xl" />
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -98,19 +100,25 @@ export default function Dashboard() {
           </div>
 
           {repositories.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-700 mb-2">Repositories</h2>
-              <div className="flex flex-col gap-2">
+            <Card className="w-64">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Repositories</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 {repositories.map((repo) => (
-                  <div key={repo.name} className="text-sm">
-                    <div className="font-medium text-slate-900">{repo.name}</div>
+                  <div key={repo.name} className="space-y-1">
+                    <Badge variant="secondary" className="font-mono">
+                      {repo.name}
+                    </Badge>
                     {repo.description && (
-                      <div className="text-xs text-slate-500">{repo.description}</div>
+                      <p className="text-xs text-muted-foreground pl-0.5">
+                        {repo.description}
+                      </p>
                     )}
                   </div>
                 ))}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </header>
 
