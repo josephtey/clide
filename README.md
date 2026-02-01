@@ -1,6 +1,6 @@
 # Clide
 
-**Your agent orchestration dashboard** - A centralized task management system for orchestrating Claude agents across multiple project repositories.
+**CLI-Driven Development** - A centralized task management system for orchestrating Claude agents across multiple project repositories.
 
 ## Overview
 
@@ -16,9 +16,9 @@ Clide allows you to:
 2. Ensure Claude Code CLI is installed and authenticated
 3. Open this directory in Claude Code: `cd /path/to/clide && claude`
 
-## Dashboard
+## Web Interface
 
-A real-time web interface for monitoring agent tasks.
+A real-time dashboard for monitoring agent tasks.
 
 ### Quick Start
 ```bash
@@ -200,7 +200,7 @@ TODO → IN_PROGRESS → COMPLETED
 
 ## Supported Repositories
 
-The dashboard can manage tasks for any git repository. Repositories are configured in `repos.json`.
+Clide can manage tasks for any git repository. Repositories are configured in `repos.json`.
 
 **Adding new repositories:**
 When you create a task for a new repo, the system will:
