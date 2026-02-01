@@ -47,7 +47,9 @@ export default function Dashboard() {
       <div className="min-h-screen bg-slate-50">
         <div className="container mx-auto p-6">
           <header className="mb-8">
-            <Skeleton className="h-10 w-64 mb-2" />
+            <div className="h-10 w-32 mb-2 flex items-center">
+              <span className="text-3xl font-bold text-slate-300">Clide</span>
+            </div>
             <Skeleton className="h-5 w-96" />
           </header>
 
@@ -70,10 +72,13 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 pt-12">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Agent Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-2">Clide</h1>
           <p className="text-muted-foreground">
+            someone to help you manage your agents
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
             {tasks.length} total tasks • {groupedTasks.in_progress.length} running •{' '}
             {config.max_parallel_tasks - groupedTasks.in_progress.length} slots available
           </p>
