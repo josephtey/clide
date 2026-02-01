@@ -1,6 +1,6 @@
-# Agent Dashboard - Claude Instructions
+# Clide - Claude Instructions
 
-This file contains behavioral instructions for Claude when operating the Agent Dashboard task orchestration system.
+This file contains behavioral instructions for Claude when operating the Clide task orchestration system.
 
 ## System Overview
 
@@ -189,7 +189,7 @@ You are operating a centralized task management system that orchestrates Claude 
 
 4. **Spawn sub-agent:**
    - Use the Task tool with `subagent_type="general-purpose"`
-   - Set `run_in_background=true` to run the agent asynchronously
+   - **Run in FOREGROUND** (do NOT use `run_in_background=true`)
    - Provide comprehensive prompt including:
      - Task specification (read from spec file)
      - Repository path
@@ -228,26 +228,14 @@ You are operating a centralized task management system that orchestrates Claude 
    When complete, the branch should be ready for review and merging.
    ```
 
-6. **Stream agent output:**
-   - Get the output_file path from the Task tool result
-   - Use Bash to tail and pipe the output to `tasks/{id}/agent.log`:
-     ```bash
-     tail -f {output_file} > tasks/{id}/agent.log &
-     ```
-   - Store the background process PID for cleanup
+6. **Save agent output to log:**
+   - After the agent completes (foreground execution), the conversation transcript is available
+   - Write the agent's work summary to `tasks/{id}/agent.log`
+   - Include key actions taken, files modified, and final status
 
-7. **Notify user:**
-   - Confirm task assignment with branch name: `feature/task-{id}`
-   - Inform user that agent is running in background
-   - Show worktree location: `{worktree_path}`
-   - Provide the log viewing command: `tail -f tasks/{id}/agent.log`
-   - Provide the checkout command for previewing: `cd {worktree_path}`
-   - Note: Task status will automatically update when agent completes
-
-8. **Monitor completion (automatic):**
-   - The system will detect when the background agent completes
+7. **Monitor completion:**
+   - Since agent runs in foreground, it blocks until complete
    - When complete:
-     - Read the final output from `tasks/{id}/agent.log`
      - If successful:
        - Update task status to "completed", set `completed_at`
        - Add task to merge queue (data/merge-queue.json) with status "waiting"
@@ -284,7 +272,7 @@ You are operating a centralized task management system that orchestrates Claude 
 2. **For each task, execute the standard assignment workflow:**
    - Create git worktree
    - Update task state
-   - Spawn sub-agent in background
+   - Spawn sub-agent in foreground (sequential execution)
    - Add to data/worktrees.json
 
 3. **Notify user:**
@@ -433,7 +421,7 @@ You are operating a centralized task management system that orchestrates Claude 
 
 ### Directory Structure
 ```
-agent-dashboard/
+clide/
 ├── data/                    # Centralized data directory
 │   ├── tasks.json          # Task state database
 │   ├── repos.json          # Repository configuration
@@ -515,7 +503,7 @@ When the user first launches Claude Code in this directory, automatically:
 2. Read `data/tasks.json` to get current task state
 3. **Display available commands and state:**
    ```
-   Agent Dashboard CLI
+   Clide - Agent Orchestration CLI
 
    Available commands:
    • Create task for <repo>: <title>. <description> (enters plan mode)

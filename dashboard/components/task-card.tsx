@@ -52,12 +52,35 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     }
   }
 
+  const getRepoColor = (repo: string) => {
+    // Generate consistent color for each repo using simple hash
+    const hash = repo.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0)
+    const colors = [
+      { bg: 'bg-blue-500', text: 'text-blue-50' },
+      { bg: 'bg-purple-500', text: 'text-purple-50' },
+      { bg: 'bg-green-500', text: 'text-green-50' },
+      { bg: 'bg-orange-500', text: 'text-orange-50' },
+      { bg: 'bg-pink-500', text: 'text-pink-50' },
+      { bg: 'bg-indigo-500', text: 'text-indigo-50' },
+      { bg: 'bg-teal-500', text: 'text-teal-50' },
+      { bg: 'bg-rose-500', text: 'text-rose-50' },
+    ]
+    return colors[hash % colors.length]
+  }
+
+  const repoColor = getRepoColor(task.repo)
+
   return (
     <TooltipProvider>
       <Card
-        className="cursor-pointer hover:shadow-lg transition-all hover:border-slate-300"
+        className="cursor-pointer hover:shadow-lg transition-all hover:border-slate-300 overflow-hidden"
         onClick={onClick}
       >
+        {/* Colored repo header */}
+        <div className={`${repoColor.bg} ${repoColor.text} px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide`}>
+          {task.repo}
+        </div>
+
         <CardHeader className="pb-3 space-y-2">
           {task.assigned_at && mounted && (
             <div className="text-xs text-muted-foreground">
@@ -77,11 +100,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-1.5 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <span className="font-medium">Repo:</span>
-              <span>{task.repo}</span>
-            </div>
-
             {task.branch && (
               <div className="flex items-center gap-1">
                 <span className="font-medium">Branch:</span>

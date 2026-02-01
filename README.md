@@ -1,10 +1,10 @@
-# Agent Dashboard
+# Clide
 
-A centralized task management system for orchestrating Claude agents across multiple project repositories.
+**Your agent orchestration dashboard** - A centralized task management system for orchestrating Claude agents across multiple project repositories.
 
 ## Overview
 
-The Agent Dashboard allows you to:
+Clide allows you to:
 - Create and manage feature development tasks across different repos
 - Spawn Claude agents to autonomously implement features
 - Track task status and progress
@@ -14,7 +14,7 @@ The Agent Dashboard allows you to:
 
 1. Clone this repository
 2. Ensure Claude Code CLI is installed and authenticated
-3. Open this directory in Claude Code: `cd /path/to/agent-dashboard && claude`
+3. Open this directory in Claude Code: `cd /path/to/clide && claude`
 
 ## Dashboard
 
@@ -38,7 +38,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ## Architecture
 
 ```
-agent-dashboard/
+clide/
 ├── data/            # Centralized data storage
 │   ├── tasks.json       # Task state and metadata
 │   ├── repos.json       # Repository configuration
