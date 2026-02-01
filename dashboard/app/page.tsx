@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Task, TasksFile } from '@/lib/schemas'
+import { Task, TasksFile, Repository } from '@/lib/schemas'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -10,7 +10,16 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [config, setConfig] = useState({ max_parallel_tasks: 3 })
+  const [repositories, setRepositories] = useState<Repository[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch repositories
+  useEffect(() => {
+    fetch('/api/repos')
+      .then((res) => res.json())
+      .then((data) => setRepositories(data.repositories))
+      .catch((err) => console.error('Failed to fetch repos:', err))
+  }, [])
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -45,12 +54,15 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <div className="container mx-auto p-6">
-          <header className="mb-8">
-            <div className="h-10 w-32 mb-2 flex items-center">
-              <span className="text-3xl font-bold text-slate-300">Clide</span>
+        <div className="container mx-auto p-6 pt-12">
+          <header className="mb-8 flex items-start justify-between">
+            <div>
+              <div className="h-10 w-32 mb-2 flex items-center">
+                <span className="text-3xl font-bold text-slate-300">Clide</span>
+              </div>
+              <Skeleton className="h-5 w-96" />
             </div>
-            <Skeleton className="h-5 w-96" />
+            <Skeleton className="h-32 w-48" />
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -73,15 +85,33 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto p-6 pt-12">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Clide</h1>
-          <p className="text-muted-foreground">
-            someone to help you manage your agents
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {tasks.length} total tasks • {groupedTasks.in_progress.length} running •{' '}
-            {config.max_parallel_tasks - groupedTasks.in_progress.length} slots available
-          </p>
+        <header className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Clide</h1>
+            <p className="text-muted-foreground">
+              someone to help you manage your agents
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {tasks.length} total tasks • {groupedTasks.in_progress.length} running •{' '}
+              {config.max_parallel_tasks - groupedTasks.in_progress.length} slots available
+            </p>
+          </div>
+
+          {repositories.length > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+              <h2 className="text-sm font-semibold text-slate-700 mb-2">Repositories</h2>
+              <div className="flex flex-col gap-2">
+                {repositories.map((repo) => (
+                  <div key={repo.name} className="text-sm">
+                    <div className="font-medium text-slate-900">{repo.name}</div>
+                    {repo.description && (
+                      <div className="text-xs text-slate-500">{repo.description}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </header>
 
         <KanbanBoard

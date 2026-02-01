@@ -29,3 +29,17 @@ export const TasksFileSchema = z.object({
 export type Task = z.infer<typeof TaskSchema>
 export type TasksFile = z.infer<typeof TasksFileSchema>
 export type TaskStatus = Task['status']
+
+export const RepositorySchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  description: z.string(),
+  main_branch: z.string(),
+})
+
+export const ReposFileSchema = z.object({
+  repositories: z.array(RepositorySchema),
+})
+
+export type Repository = z.infer<typeof RepositorySchema>
+export type ReposFile = z.infer<typeof ReposFileSchema>
