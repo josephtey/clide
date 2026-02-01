@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Task } from '@/lib/schemas'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,11 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const getStatusColor = (status: Task['status']) => {
     switch (status) {
       case 'todo':
@@ -68,20 +74,20 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
           <div className="flex items-center gap-1">
             <span className="font-medium">Created:</span>
-            <span>{format(new Date(task.created_at), 'MMM d, h:mm a')}</span>
+            <span>{mounted ? format(new Date(task.created_at), 'MMM d, h:mm a') : task.created_at}</span>
           </div>
 
           {task.assigned_at && (
             <div className="flex items-center gap-1">
               <span className="font-medium">Assigned:</span>
-              <span>{format(new Date(task.assigned_at), 'MMM d, h:mm a')}</span>
+              <span>{mounted ? format(new Date(task.assigned_at), 'MMM d, h:mm a') : task.assigned_at}</span>
             </div>
           )}
 
           {task.completed_at && (
             <div className="flex items-center gap-1">
               <span className="font-medium">Completed:</span>
-              <span>{format(new Date(task.completed_at), 'MMM d, h:mm a')}</span>
+              <span>{mounted ? format(new Date(task.completed_at), 'MMM d, h:mm a') : task.completed_at}</span>
             </div>
           )}
 

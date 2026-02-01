@@ -41,6 +41,8 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
 
   const renderMarkdown = (text: string) => {
     // Simple markdown-like formatting
+    if (!text || typeof text !== 'string') return null
+
     return text
       .split('\n')
       .map((line, i) => {
@@ -89,56 +91,78 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
     if (!logs) return null
 
     const lines = logs.split('\n').filter(line => line.trim())
-    const messages: Array<{ role: string; content: string; agentId?: string }> = []
+    const entries: any[] = []
 
     lines.forEach((line) => {
       try {
         const entry = JSON.parse(line)
-        if (entry.message) {
-          const content = typeof entry.message === 'string'
-            ? entry.message
-            : entry.message.content || JSON.stringify(entry.message)
-
-          messages.push({
-            role: entry.message.role || entry.type || 'system',
-            content: content,
-            agentId: entry.agentId
-          })
-        }
+        entries.push(entry)
       } catch {
-        // Skip non-JSON lines in conversation view
+        // Skip malformed lines
       }
     })
 
-    return messages.map((msg, idx) => {
-      const isUser = msg.role === 'user'
-      const isAssistant = msg.role === 'assistant'
+    if (entries.length === 0) {
+      return <div className="text-slate-400 italic text-center py-8">No log entries yet...</div>
+    }
+
+    return entries.map((entry, idx) => {
+      const messageType = entry.type || 'log'
+      const isUser = entry.message?.role === 'user'
+      const isAssistant = entry.message?.role === 'assistant'
+
+      // Extract message content
+      let messageContent = ''
+      if (entry.message) {
+        if (typeof entry.message === 'string') {
+          messageContent = entry.message
+        } else if (entry.message.content) {
+          messageContent = entry.message.content
+        }
+      }
 
       return (
-        <div key={idx} className="mb-6 last:mb-0">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`text-xs font-semibold uppercase tracking-wide ${
-              isUser ? 'text-blue-400' : isAssistant ? 'text-purple-400' : 'text-slate-400'
-            }`}>
-              {isUser ? 'User' : isAssistant ? 'Agent' : msg.role}
-            </span>
-            {msg.agentId && (
-              <span className="text-[10px] text-slate-500 font-mono">
-                {msg.agentId}
+        <div key={idx} className="mb-4 pb-4 border-b border-slate-800 last:border-0 last:mb-0">
+          {/* Header with metadata */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
+                isUser ? 'bg-blue-500/20 text-blue-300' :
+                isAssistant ? 'bg-purple-500/20 text-purple-300' :
+                'bg-slate-700 text-slate-400'
+              }`}>
+                {entry.message?.role || messageType}
               </span>
-            )}
-          </div>
-          <div className={`text-sm leading-relaxed p-4 rounded-lg ${
-            isUser
-              ? 'bg-slate-800 text-slate-100 border border-slate-700'
-              : isAssistant
-              ? 'bg-slate-900/50 text-slate-200'
-              : 'bg-slate-900/30 text-slate-300'
-          }`}>
-            <div className="prose prose-invert prose-sm max-w-none">
-              {renderMarkdown(msg.content)}
+
+              {entry.agentId && (
+                <span className="text-[10px] font-mono text-slate-500">
+                  agent: {entry.agentId.slice(0, 7)}
+                </span>
+              )}
+
+              {entry.sessionId && (
+                <span className="text-[10px] font-mono text-slate-600">
+                  session: {entry.sessionId.slice(0, 8)}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-[10px] text-slate-600">
+              {entry.cwd && (
+                <span className="font-mono">{entry.cwd.split('/').pop()}</span>
+              )}
+              {entry.gitBranch && (
+                <span className="font-mono">git:{entry.gitBranch}</span>
+              )}
             </div>
           </div>
+
+          {/* Message content */}
+          {messageContent && (
+            <div className="text-sm leading-relaxed text-slate-200 pl-1">
+              {renderMarkdown(messageContent)}
+            </div>
+          )}
         </div>
       )
     })
