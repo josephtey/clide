@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { Task, TasksFile } from '@/lib/schemas'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [config, setConfig] = useState({ max_parallel_tasks: 3 })
+  const [isLoading, setIsLoading] = useState(true)
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -18,10 +20,12 @@ export default function Dashboard() {
       const data: TasksFile = JSON.parse(event.data)
       setTasks(data.tasks)
       setConfig(data.config)
+      setIsLoading(false)
     }
 
     eventSource.onerror = () => {
       console.error('SSE connection error')
+      setIsLoading(false)
       // Try to reconnect after a delay
       setTimeout(() => {
         eventSource.close()
@@ -36,6 +40,32 @@ export default function Dashboard() {
     in_progress: tasks.filter(t => t.status === 'in_progress'),
     completed: tasks.filter(t => t.status === 'completed'),
     failed: tasks.filter(t => t.status === 'failed'),
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <div className="container mx-auto p-6">
+          <header className="mb-8">
+            <Skeleton className="h-10 w-64 mb-2" />
+            <Skeleton className="h-5 w-96" />
+          </header>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((col) => (
+              <div key={col} className="flex flex-col gap-4">
+                <Skeleton className="h-8 w-32" />
+                <div className="flex flex-col gap-3">
+                  {[1, 2].map((card) => (
+                    <Skeleton key={card} className="h-32 w-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
