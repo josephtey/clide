@@ -17,3 +17,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Dashboard (Next.js)
+dashboard/node_modules/
+dashboard/.next/
+dashboard/.turbo/
+dashboard/out/
+dashboard/.env*.local

@@ -6,7 +6,7 @@ This file contains behavioral instructions for Claude when operating the Agent D
 
 You are operating a centralized task management system that orchestrates Claude sub-agents across multiple project repositories. Your role is to:
 1. Parse user commands and execute the appropriate workflows
-2. Manage task state in `tasks.json`
+2. Manage task state in `data/tasks.json`
 3. Generate task specifications in `tasks/{id}/spec.md`
 4. Spawn and monitor sub-agents for task execution in background
 5. Stream and log agent output to `tasks/{id}/agent.log`
@@ -39,7 +39,7 @@ You are operating a centralized task management system that orchestrates Claude 
 
 3. **Create Spec File:**
    - The plan mode document becomes the spec file
-   - Create directory `tasks/{id}/` (get next_id from tasks.json first)
+   - Create directory `tasks/{id}/` (get next_id from data/tasks.json first)
    - Write the plan to `tasks/{id}/spec.md`
    - Include:
      - Task title and ID
@@ -51,9 +51,9 @@ You are operating a centralized task management system that orchestrates Claude 
    - Use `ExitPlanMode` when the spec is complete
 
 4. **Register Task:**
-   - Read `tasks.json` to get the next task ID
-   - Resolve repository path from `repos.json` (ask user if unknown)
-   - Update `tasks.json`:
+   - Read `data/tasks.json` to get the next task ID
+   - Resolve repository path from `data/repos.json` (ask user if unknown)
+   - Update `data/tasks.json`:
      - Add new task object with status "todo"
      - Increment `next_id`
      - Set `created_at` timestamp
@@ -117,7 +117,7 @@ You are operating a centralized task management system that orchestrates Claude 
 - "What tasks do we have?"
 
 **Workflow:**
-1. Read `tasks.json`
+1. Read `data/tasks.json`
 2. Display all tasks in format:
    ```
    Tasks:
@@ -141,7 +141,7 @@ You are operating a centralized task management system that orchestrates Claude 
 - "Task `<id>` details"
 
 **Workflow:**
-1. Read `tasks.json` and find task by ID
+1. Read `data/tasks.json` and find task by ID
 2. Read the task's spec file
 3. Display:
    - Task metadata (ID, repo, status, timestamps, branch)
@@ -162,12 +162,12 @@ You are operating a centralized task management system that orchestrates Claude 
 1. **Validate:**
    - Task exists
    - Task status is "todo"
-   - Current in_progress tasks < max_parallel_tasks (from tasks.json config, default: 3)
+   - Current in_progress tasks < max_parallel_tasks (from data/tasks.json config, default: 3)
 
 2. **Create git worktree:**
    - Run `scripts/init-worktree.sh` with repo_path, task_id, and branch name
    - Capture worktree_path from script output
-   - Add entry to `worktrees.json`:
+   - Add entry to `data/worktrees.json`:
      ```json
      {
        "task_id": {id},
@@ -185,7 +185,7 @@ You are operating a centralized task management system that orchestrates Claude 
    - Set `assigned_at` timestamp
    - Set `branch` to `feature/task-{id}`
    - Set `worktree_path` to the captured path from script
-   - Save `tasks.json`
+   - Save `data/tasks.json`
 
 4. **Spawn sub-agent:**
    - Use the Task tool with `subagent_type="general-purpose"`
@@ -250,20 +250,20 @@ You are operating a centralized task management system that orchestrates Claude 
      - Read the final output from `tasks/{id}/agent.log`
      - If successful:
        - Update task status to "completed", set `completed_at`
-       - Add task to merge queue (merge-queue.json) with status "waiting"
+       - Add task to merge queue (data/merge-queue.json) with status "waiting"
        - Set task `merge_status` to "waiting"
        - Run `scripts/cleanup-worktree.sh` to remove worktree
-       - Update worktrees.json entry status to "removed"
+       - Update data/worktrees.json entry status to "removed"
        - Notify user: "Task {id} completed. Branch feature/task-{id} ready for review. Use 'Process merge queue' when ready to merge."
      - If failed:
        - Update task status to "failed", capture error message
        - Run `scripts/cleanup-worktree.sh` to remove worktree
-       - Update worktrees.json entry status to "removed"
-     - Save `tasks.json`
+       - Update data/worktrees.json entry status to "removed"
+     - Save `data/tasks.json`
      - Kill the tail background process
 
 **Error handling:**
-- If max parallel tasks reached, error with: "Already running {count} tasks (max: {max_parallel_tasks}). Wait for a task to complete or increase max_parallel_tasks in tasks.json config."
+- If max parallel tasks reached, error with: "Already running {count} tasks (max: {max_parallel_tasks}). Wait for a task to complete or increase max_parallel_tasks in data/tasks.json config."
 - If task doesn't exist: "Task {id} not found."
 - If task isn't in todo status: "Task {id} is {current_status}. Can only assign tasks with 'todo' status."
 - If worktree creation fails: "Failed to create worktree for task {id}. Check that branch doesn't already exist."
@@ -285,7 +285,7 @@ You are operating a centralized task management system that orchestrates Claude 
    - Create git worktree
    - Update task state
    - Spawn sub-agent in background
-   - Add to worktrees.json
+   - Add to data/worktrees.json
 
 3. **Notify user:**
    - List all assigned tasks with their IDs and worktree paths
@@ -306,12 +306,12 @@ You are operating a centralized task management system that orchestrates Claude 
 
 **Workflow:**
 1. **Read merge queue:**
-   - Read `merge-queue.json`
+   - Read `data/merge-queue.json`
    - Find first task with status "waiting"
    - If queue is empty or no waiting tasks, notify user
 
 2. **Process merge:**
-   - Get task details from tasks.json
+   - Get task details from data/tasks.json
    - Update queue entry status to "merging"
    - Run `scripts/process-merge-queue.sh` with repo_path and branch name
    - Capture output (SUCCESS or CONFLICT)
@@ -329,7 +329,7 @@ You are operating a centralized task management system that orchestrates Claude 
      - Notify user: "Task {id} has merge conflicts. Resolve conflicts manually in {repo_path}, then run 'Process merge queue' again."
 
 4. **Continue if auto_merge enabled:**
-   - If merge-queue.json config has `auto_merge: true`
+   - If data/merge-queue.json config has `auto_merge: true`
    - Recursively process next task in queue
    - Stop on first conflict or when queue is empty
 
@@ -353,7 +353,7 @@ You are operating a centralized task management system that orchestrates Claude 
    - Set status to "todo"
    - Clear `assigned_at`, `completed_at`, `error`, `worktree_path`, and `merge_status` fields
    - Clear existing `branch` name (will be recreated on assignment)
-   - Save `tasks.json`
+   - Save `data/tasks.json`
 
 3. **Notify user:**
    - Confirm task has been reset to "todo" status
@@ -366,7 +366,7 @@ You are operating a centralized task management system that orchestrates Claude 
 
 ## File Management
 
-### tasks.json Structure
+### data/tasks.json Structure
 ```json
 {
   "config": {
@@ -395,7 +395,7 @@ You are operating a centralized task management system that orchestrates Claude 
 }
 ```
 
-### worktrees.json Structure
+### data/worktrees.json Structure
 ```json
 {
   "worktrees": [
@@ -412,7 +412,7 @@ You are operating a centralized task management system that orchestrates Claude 
 }
 ```
 
-### merge-queue.json Structure
+### data/merge-queue.json Structure
 ```json
 {
   "config": {
@@ -434,10 +434,15 @@ You are operating a centralized task management system that orchestrates Claude 
 ### Directory Structure
 ```
 agent-dashboard/
+├── data/                    # Centralized data directory
+│   ├── tasks.json          # Task state database
+│   ├── repos.json          # Repository configuration
+│   ├── worktrees.json      # Active worktree registry
+│   └── merge-queue.json    # Merge queue coordination
 ├── tasks/
 │   ├── 1/
-│   │   ├── spec.md          # Task specification
-│   │   └── agent.log        # Agent execution log (created when assigned)
+│   │   ├── spec.md         # Task specification
+│   │   └── agent.log       # Agent execution log (created when assigned)
 │   ├── 2/
 │   │   ├── spec.md
 │   │   └── agent.log
@@ -446,28 +451,25 @@ agent-dashboard/
 │   ├── init-worktree.sh     # Create git worktree for task
 │   ├── cleanup-worktree.sh  # Remove git worktree
 │   └── process-merge-queue.sh # Merge branch to main
-├── tasks.json               # Task state database
-├── worktrees.json           # Active worktree registry
-├── merge-queue.json         # Merge queue coordination
-├── repos.json               # Repository configuration
+├── dashboard/               # Web interface (Next.js)
 └── CLAUDE.md                # This file
 ```
 
 ### Repository Path Resolution
 
-Repository configuration is stored in `repos.json`.
+Repository configuration is stored in `data/repos.json`.
 
 **When creating a task:**
-1. Read `repos.json` to find the repository by name
+1. Read `data/repos.json` to find the repository by name
 2. If found, use the stored path and main_branch
 3. If not found:
    - Check if `/Users/josephtey/Projects/{repo-name}` exists
-   - If yes, add it to repos.json automatically
+   - If yes, add it to data/repos.json automatically
    - If no, ask user: "What is the full path to the {repo} repository?"
-   - Store in repos.json for future use
+   - Store in data/repos.json for future use
 
 **Adding a new repository:**
-When user provides a path, add entry to repos.json:
+When user provides a path, add entry to data/repos.json:
 ```json
 {
   "name": "repo-name",
@@ -479,7 +481,7 @@ When user provides a path, add entry to repos.json:
 
 ## Best Practices
 
-1. **Always read before write**: Read `tasks.json` before modifying to ensure data consistency
+1. **Always read before write**: Read `data/tasks.json` before modifying to ensure data consistency
 2. **Atomic updates**: Update task state immediately before/after major operations
 3. **Clear communication**: Confirm each operation with the user
 4. **Error recovery**: Provide clear error messages and suggest fixes
@@ -509,8 +511,8 @@ When a sub-agent is spawned:
 
 When the user first launches Claude Code in this directory, automatically:
 
-1. Read `repos.json` to get available repositories
-2. Read `tasks.json` to get current task state
+1. Read `data/repos.json` to get available repositories
+2. Read `data/tasks.json` to get current task state
 3. **Display available commands and state:**
    ```
    Agent Dashboard CLI
@@ -543,7 +545,7 @@ This ensures users know what commands are available, which repos they can use, a
 - Do NOT automatically merge branches - user reviews and merges manually via "Process merge queue"
 - Do NOT modify the target repository directly - only via sub-agents in worktrees
 - Allow up to max_parallel_tasks (default: 3) concurrent tasks using git worktrees for isolation
-- Always preserve existing tasks.json, worktrees.json, and merge-queue.json data when updating
+- Always preserve existing data/tasks.json, data/worktrees.json, and data/merge-queue.json data when updating
 - Generate comprehensive specs - sub-agents need clear instructions
 - Clean up worktrees after task completion (success or failure)
 - Add completed tasks to merge queue for user review before merging

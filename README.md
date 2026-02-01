@@ -16,13 +16,37 @@ The Agent Dashboard allows you to:
 2. Ensure Claude Code CLI is installed and authenticated
 3. Open this directory in Claude Code: `cd /path/to/agent-dashboard && claude`
 
+## Dashboard
+
+A real-time web interface for monitoring agent tasks.
+
+### Quick Start
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+### Features
+- Kanban board view of all tasks
+- Real-time task status updates
+- Live log streaming for running agents
+- Agent health monitoring
+
 ## Architecture
 
 ```
 agent-dashboard/
-├── tasks.json       # Task state and metadata
-├── repos.json       # Repository configuration
-├── specs/           # Auto-generated task specifications
+├── data/            # Centralized data storage
+│   ├── tasks.json       # Task state and metadata
+│   ├── repos.json       # Repository configuration
+│   ├── worktrees.json   # Active worktree registry
+│   └── merge-queue.json # Merge queue coordination
+├── tasks/           # Task specifications and logs
+├── scripts/         # Automation scripts
+├── dashboard/       # Web interface (Next.js)
 ├── CLAUDE.md        # Agent behavioral instructions
 └── README.md        # This file
 ```
