@@ -6,6 +6,16 @@ import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Info } from 'lucide-react'
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -56,6 +66,32 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="container mx-auto p-6 pt-12">
+          <div className="absolute top-6 right-6">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Info className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Philosophy</DialogTitle>
+                  <DialogDescription className="pt-4 space-y-4 text-left">
+                    <p className="text-base text-foreground leading-relaxed">
+                      This is an <strong>agent-first approach</strong> to software engineering that highly emphasizes maximizing time talking and planning with the agent to make the right high-level, architectural decisions.
+                    </p>
+                    <p className="text-base text-foreground leading-relaxed">
+                      The goal is to trust the AI to write the code decently well, but the <strong>main focus is on higher-level architecture</strong> — which matters the most.
+                    </p>
+                    <p className="text-base text-foreground leading-relaxed">
+                      Spend time discussing requirements, clarifying edge cases, and designing the implementation approach. Once the plan is solid, let the agent handle the execution.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </div>
+
           <header className="mb-8">
             <div className="flex items-start justify-between">
               <div>
@@ -95,6 +131,32 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto p-6 pt-12">
+        <div className="absolute top-6 right-6">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Info className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Philosophy</DialogTitle>
+                <DialogDescription className="pt-4 space-y-4 text-left">
+                  <p className="text-base text-foreground leading-relaxed">
+                    This is an <strong>agent-first approach</strong> to software engineering that highly emphasizes maximizing time talking and planning with the agent to make the right high-level, architectural decisions.
+                  </p>
+                  <p className="text-base text-foreground leading-relaxed">
+                    The goal is to trust the AI to write the code decently well, but the <strong>main focus is on higher-level architecture</strong> — which matters the most.
+                  </p>
+                  <p className="text-base text-foreground leading-relaxed">
+                    Spend time discussing requirements, clarifying edge cases, and designing the implementation approach. Once the plan is solid, let the agent handle the execution.
+                  </p>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         <header className="mb-8">
           <div className="flex items-start justify-between">
             <div>
