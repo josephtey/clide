@@ -66,32 +66,6 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="container mx-auto p-6 pt-12">
-          <div className="absolute top-6 right-6">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Info className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Philosophy</DialogTitle>
-                  <DialogDescription className="pt-4 space-y-4 text-left">
-                    <p className="text-base text-foreground leading-relaxed">
-                      This is an <strong>agent-first approach</strong> to software engineering that highly emphasizes maximizing time talking and planning with the agent to make the right high-level, architectural decisions.
-                    </p>
-                    <p className="text-base text-foreground leading-relaxed">
-                      The goal is to trust the AI to write the code decently well, but the <strong>main focus is on higher-level architecture</strong> — which matters the most.
-                    </p>
-                    <p className="text-base text-foreground leading-relaxed">
-                      Spend time discussing requirements, clarifying edge cases, and designing the implementation approach. Once the plan is solid, let the agent handle the execution.
-                    </p>
-                  </DialogDescription>
-                </DialogHeader>
-              </DialogContent>
-            </Dialog>
-          </div>
-
           <header className="mb-8">
             <div className="flex items-start justify-between">
               <div>
@@ -143,13 +117,16 @@ export default function Dashboard() {
                 <DialogTitle>Philosophy</DialogTitle>
                 <DialogDescription className="pt-4 space-y-4 text-left">
                   <p className="text-base text-foreground leading-relaxed">
-                    This is an <strong>agent-first approach</strong> to software engineering that highly emphasizes maximizing time talking and planning with the agent to make the right high-level, architectural decisions.
+                    <strong>Think of Clide as your personal research lab.</strong> You're the principal investigator, orchestrating experiments across multiple projects. Each agent is running a hypothesis you want to test.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
-                    The goal is to trust the AI to write the code decently well, but the <strong>main focus is on higher-level architecture</strong> — which matters the most.
+                    The best engineers have sharp product instinct and architectural taste. But that traditionally took <em>years</em> of building to develop. Now, every task you delegate is a learning opportunity compressed into minutes instead of weeks.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
-                    Spend time discussing requirements, clarifying edge cases, and designing the implementation approach. Once the plan is solid, let the agent handle the execution.
+                    <strong>The workflow:</strong> Trust your gut. Spin up agents to explore different approaches. See what works. Build intuition faster than ever before.
+                  </p>
+                  <p className="text-base text-foreground leading-relaxed">
+                    This isn't just about shipping faster — it's about becoming a better builder, faster. Your agents do the grunt work. You accumulate the wisdom.
                   </p>
                 </DialogDescription>
               </DialogHeader>
@@ -182,7 +159,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <p className="text-muted-foreground">
-                someone to help you manage your agents
+                A next-gen scientific lab for building
               </p>
               <p className="text-sm text-muted-foreground mt-1">
                 {tasks.length} total tasks • {groupedTasks.in_progress.length} running •{' '}
@@ -204,6 +181,41 @@ export default function Dashboard() {
             )}
           </div>
         </header>
+
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Lab Students</h2>
+          <div className="bg-white rounded-lg border border-slate-200 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Alex</h3>
+                  <span className="text-xs text-slate-500">Product Builder</span>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Building a shared context layer for teams. Exploring how headless MCP tools can create a shared notebook where everyone's AI agents contribute and learn together.
+                </p>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Jordan</h3>
+                  <span className="text-xs text-slate-500">Systems Architect</span>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Mastering agent harness design and infrastructure. Building out <span className="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">beyond-agents</span> with cutting-edge harness features.
+                </p>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Sam</h3>
+                  <span className="text-xs text-slate-500">Floating Researcher</span>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Still exploring research directions. Occasionally helps with <span className="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">joetey.com</span> and other lab needs while finding their focus area.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <KanbanBoard
           tasks={groupedTasks}
