@@ -21,7 +21,9 @@ The Agent Dashboard allows you to:
 ```
 agent-dashboard/
 ├── tasks.json       # Task state and metadata
+├── repos.json       # Repository configuration
 ├── specs/           # Auto-generated task specifications
+├── CLAUDE.md        # Agent behavioral instructions
 └── README.md        # This file
 ```
 
@@ -40,15 +42,25 @@ Create task for <repo-name>: <title>. <description>
 Create task for joetey.com: Add dark mode toggle. Should be in the header using a sun/moon icon. Persist the preference to localStorage.
 ```
 
-The system will:
-- Generate a unique task ID
-- Create a spec file in `specs/task-{id}.md`
-- Add the task to `tasks.json` with status "todo"
+**What happens:**
+1. Claude enters plan mode to have a planning conversation with you
+2. Claude explores the target repository to understand existing patterns
+3. You collaborate on the implementation approach
+4. The plan becomes the spec file at `specs/task-{id}.md`
+5. Task is registered in `tasks.json` with status "todo"
 
-**Description guidelines:**
-- Provide a paragraph with key requirements and constraints
-- Include important implementation details (icons, persistence, UI placement)
-- Agent will infer standard implementation patterns
+**Planning conversation covers:**
+- Clarifying exact requirements
+- UI/UX preferences
+- Technology choices
+- Integration with existing code
+- Files to modify/create
+- Success criteria
+
+**Benefits of planning first:**
+- Specs are clearer and more actionable
+- Implementation approach is validated before work starts
+- Reduces failed tasks from unclear requirements
 
 ### Listing Tasks
 
@@ -164,12 +176,27 @@ TODO → IN_PROGRESS → COMPLETED
 
 ## Supported Repositories
 
-The dashboard can manage tasks for any git repository. When creating a task, specify the repo name and ensure the repository path exists locally.
+The dashboard can manage tasks for any git repository. Repositories are configured in `repos.json`.
 
-**Current repos:**
-- `joetey.com` → `/Users/josephtey/Projects/joetey.com`
+**Adding new repositories:**
+When you create a task for a new repo, the system will:
+1. Check if the repo exists at `/Users/josephtey/Projects/{repo-name}`
+2. If not found, prompt you for the full path
+3. Automatically add it to `repos.json` for future use
 
-To add more repositories, just reference them when creating tasks. The system will resolve the path automatically.
+**repos.json format:**
+```json
+{
+  "repositories": [
+    {
+      "name": "joetey.com",
+      "path": "/Users/josephtey/Projects/joetey.com",
+      "description": "Personal website",
+      "main_branch": "main"
+    }
+  ]
+}
+```
 
 ## Tips
 

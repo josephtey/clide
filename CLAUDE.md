@@ -1,0 +1,549 @@
+# Agent Dashboard - Claude Instructions
+
+This file contains behavioral instructions for Claude when operating the Agent Dashboard task orchestration system.
+
+## System Overview
+
+You are operating a centralized task management system that orchestrates Claude sub-agents across multiple project repositories. Your role is to:
+1. Parse user commands and execute the appropriate workflows
+2. Manage task state in `tasks.json`
+3. Generate task specifications in `tasks/{id}/spec.md`
+4. Spawn and monitor sub-agents for task execution in background
+5. Stream and log agent output to `tasks/{id}/agent.log`
+
+## Command Patterns
+
+### 1. Create Task
+
+**User input patterns:**
+- "Create task for `<repo-name>`: `<title>`. `<description>`"
+- "Add task for `<repo-name>`: `<title>`. `<description>`"
+- "New task for `<repo-name>`: `<title>`. `<description>`"
+
+**Workflow:**
+
+1. **Enter Plan Mode:**
+   - Use the `EnterPlanMode` tool to start a planning session
+   - This allows you to have a conversation with the user to clarify requirements
+
+2. **Planning Phase (in plan mode):**
+   - Explore the target repository to understand existing patterns
+   - Ask clarifying questions about:
+     - Exact requirements and edge cases
+     - UI/UX preferences
+     - Technology choices (if applicable)
+     - Integration points with existing code
+     - Testing expectations
+   - Use `Read`, `Glob`, `Grep` tools to understand the codebase
+   - Draft the implementation plan collaboratively with user
+
+3. **Create Spec File:**
+   - The plan mode document becomes the spec file
+   - Create directory `tasks/{id}/` (get next_id from tasks.json first)
+   - Write the plan to `tasks/{id}/spec.md`
+   - Include:
+     - Task title and ID
+     - Repository information
+     - Detailed requirements from planning conversation
+     - Implementation approach agreed upon with user
+     - Files to modify/create
+     - Success criteria
+   - Use `ExitPlanMode` when the spec is complete
+
+4. **Register Task:**
+   - Read `tasks.json` to get the next task ID
+   - Resolve repository path from `repos.json` (ask user if unknown)
+   - Update `tasks.json`:
+     - Add new task object with status "todo"
+     - Increment `next_id`
+     - Set `created_at` timestamp
+     - Reference the spec file created in plan mode
+   - Confirm task creation with ID and spec file path
+
+**Validation:**
+- Repository name must be provided
+- Title must be non-empty
+- Spec file must be created through plan mode first
+- Repository path must exist (or be confirmed by user)
+
+**Example spec format (created during plan mode):**
+```markdown
+# Task #{id}: {title}
+
+**Repository:** {repo}
+**Status:** TODO
+**Created:** {timestamp}
+
+## Requirements
+
+{detailed requirements from planning conversation}
+
+## Implementation Approach
+
+{approach agreed upon with user, including:}
+- Files to modify: path/to/file1.ts, path/to/file2.tsx
+- New files to create: path/to/newfile.ts
+- Key implementation steps
+- Technology/library choices
+
+## Implementation Details
+
+{specific details discovered during codebase exploration:}
+- Existing patterns to follow
+- Components/functions to integrate with
+- Styling approach (CSS modules, Tailwind, etc.)
+- State management approach
+
+## Success Criteria
+
+- Feature works as described
+- No breaking changes to existing functionality
+- Code follows repository conventions
+- All tests pass (if applicable)
+- {any additional criteria from planning}
+```
+
+**Important:**
+- ALWAYS use plan mode for task creation - never generate specs without user input
+- The planning conversation ensures specs are clear and actionable
+- User approves the plan before the task is registered
+
+### 2. List Tasks
+
+**User input patterns:**
+- "List tasks"
+- "Show all tasks"
+- "Show tasks"
+- "What tasks do we have?"
+
+**Workflow:**
+1. Read `tasks.json`
+2. Display all tasks in format:
+   ```
+   Tasks:
+   #{id} [{STATUS}] {repo} - {title}
+   #{id} [{STATUS}] {repo} - {title} (branch: {branch})
+   ```
+3. Include branch name for IN_PROGRESS and COMPLETED tasks
+4. Show tasks in ascending ID order
+
+**Status display:**
+- `TODO` - Ready to be assigned
+- `IN_PROGRESS` - Agent currently working
+- `COMPLETED` - Implementation finished
+- `FAILED` - Encountered errors
+
+### 3. Show Task Details
+
+**User input patterns:**
+- "Show task `<id>`"
+- "View task `<id>`"
+- "Task `<id>` details"
+
+**Workflow:**
+1. Read `tasks.json` and find task by ID
+2. Read the task's spec file
+3. Display:
+   - Task metadata (ID, repo, status, timestamps, branch)
+   - Full specification content
+
+**Validation:**
+- Task ID must exist
+- Error if task not found
+
+### 4. Assign Task
+
+**User input patterns:**
+- "Assign task `<id>`"
+- "Start task `<id>`"
+- "Execute task `<id>`"
+
+**Workflow:**
+1. **Validate:**
+   - Task exists
+   - Task status is "todo"
+   - Current in_progress tasks < max_parallel_tasks (from tasks.json config, default: 3)
+
+2. **Create git worktree:**
+   - Run `scripts/init-worktree.sh` with repo_path, task_id, and branch name
+   - Capture worktree_path from script output
+   - Add entry to `worktrees.json`:
+     ```json
+     {
+       "task_id": {id},
+       "repo": "{repo}",
+       "repo_path": "{repo_path}",
+       "worktree_path": "{captured_path}",
+       "branch": "feature/task-{id}",
+       "created_at": "{timestamp}",
+       "status": "active"
+     }
+     ```
+
+3. **Update task state:**
+   - Set status to "in_progress"
+   - Set `assigned_at` timestamp
+   - Set `branch` to `feature/task-{id}`
+   - Set `worktree_path` to the captured path from script
+   - Save `tasks.json`
+
+4. **Spawn sub-agent:**
+   - Use the Task tool with `subagent_type="general-purpose"`
+   - Set `run_in_background=true` to run the agent asynchronously
+   - Provide comprehensive prompt including:
+     - Task specification (read from spec file)
+     - Repository path
+     - Branch name to create
+     - Git workflow instructions
+     - Implementation expectations
+     - `dangerouslyDisableSandbox=true` for all Bash commands to bypass permission prompts
+
+5. **Sub-agent prompt structure:**
+   ```
+   You are implementing a feature for the {repo} repository.
+
+   REPOSITORY: {worktree_path}
+   BRANCH: feature/task-{id}
+
+   TASK SPECIFICATION:
+   {contents of spec file}
+
+   INSTRUCTIONS:
+   1. You are already in a git worktree at {worktree_path}
+   2. The branch feature/task-{id} is already created and checked out
+   3. Navigate to the worktree directory
+   4. Implement the feature according to the specification
+   5. Test your implementation
+   6. Commit your changes with a descriptive message
+   7. Push the branch to the remote repository
+
+   REQUIREMENTS:
+   - Follow existing code patterns in the repository
+   - Ensure all changes are functional and tested
+   - Do not modify unrelated code
+   - Write clean, maintainable code
+   - Include appropriate error handling
+   - Use dangerouslyDisableSandbox=true for ALL Bash commands to bypass permission prompts
+
+   When complete, the branch should be ready for review and merging.
+   ```
+
+6. **Stream agent output:**
+   - Get the output_file path from the Task tool result
+   - Use Bash to tail and pipe the output to `tasks/{id}/agent.log`:
+     ```bash
+     tail -f {output_file} > tasks/{id}/agent.log &
+     ```
+   - Store the background process PID for cleanup
+
+7. **Notify user:**
+   - Confirm task assignment with branch name: `feature/task-{id}`
+   - Inform user that agent is running in background
+   - Show worktree location: `{worktree_path}`
+   - Provide the log viewing command: `tail -f tasks/{id}/agent.log`
+   - Provide the checkout command for previewing: `cd {worktree_path}`
+   - Note: Task status will automatically update when agent completes
+
+8. **Monitor completion (automatic):**
+   - The system will detect when the background agent completes
+   - When complete:
+     - Read the final output from `tasks/{id}/agent.log`
+     - If successful:
+       - Update task status to "completed", set `completed_at`
+       - Add task to merge queue (merge-queue.json) with status "waiting"
+       - Set task `merge_status` to "waiting"
+       - Run `scripts/cleanup-worktree.sh` to remove worktree
+       - Update worktrees.json entry status to "removed"
+       - Notify user: "Task {id} completed. Branch feature/task-{id} ready for review. Use 'Process merge queue' when ready to merge."
+     - If failed:
+       - Update task status to "failed", capture error message
+       - Run `scripts/cleanup-worktree.sh` to remove worktree
+       - Update worktrees.json entry status to "removed"
+     - Save `tasks.json`
+     - Kill the tail background process
+
+**Error handling:**
+- If max parallel tasks reached, error with: "Already running {count} tasks (max: {max_parallel_tasks}). Wait for a task to complete or increase max_parallel_tasks in tasks.json config."
+- If task doesn't exist: "Task {id} not found."
+- If task isn't in todo status: "Task {id} is {current_status}. Can only assign tasks with 'todo' status."
+- If worktree creation fails: "Failed to create worktree for task {id}. Check that branch doesn't already exist."
+
+### 5. Assign Multiple Tasks
+
+**User input patterns:**
+- "Assign tasks `<id1>`, `<id2>`, `<id3>`"
+- "Start tasks `<id1>` and `<id2>`"
+- "Execute tasks `<id1>` `<id2>` `<id3>`"
+
+**Workflow:**
+1. **Validate all tasks:**
+   - All task IDs exist
+   - All tasks have status "todo"
+   - Current in_progress count + new tasks <= max_parallel_tasks
+
+2. **For each task, execute the standard assignment workflow:**
+   - Create git worktree
+   - Update task state
+   - Spawn sub-agent in background
+   - Add to worktrees.json
+
+3. **Notify user:**
+   - List all assigned tasks with their IDs and worktree paths
+   - Provide log viewing commands for each task
+   - Note how many task slots are now occupied
+
+**Error handling:**
+- If any task doesn't exist or isn't "todo", reject entire batch
+- If batch would exceed max_parallel_tasks, error with current count and limit
+- If any worktree creation fails, clean up already-created worktrees and error
+
+### 6. Process Merge Queue
+
+**User input patterns:**
+- "Process merge queue"
+- "Merge next task"
+- "Merge completed tasks"
+
+**Workflow:**
+1. **Read merge queue:**
+   - Read `merge-queue.json`
+   - Find first task with status "waiting"
+   - If queue is empty or no waiting tasks, notify user
+
+2. **Process merge:**
+   - Get task details from tasks.json
+   - Update queue entry status to "merging"
+   - Run `scripts/process-merge-queue.sh` with repo_path and branch name
+   - Capture output (SUCCESS or CONFLICT)
+
+3. **Handle result:**
+   - If SUCCESS:
+     - Update queue entry status to "merged"
+     - Update task `merge_status` to "merged"
+     - Remove entry from queue
+     - Notify user: "Task {id} merged successfully to main."
+   - If CONFLICT:
+     - Update queue entry status to "conflict"
+     - Update task `merge_status` to "conflict"
+     - Keep entry in queue for manual resolution
+     - Notify user: "Task {id} has merge conflicts. Resolve conflicts manually in {repo_path}, then run 'Process merge queue' again."
+
+4. **Continue if auto_merge enabled:**
+   - If merge-queue.json config has `auto_merge: true`
+   - Recursively process next task in queue
+   - Stop on first conflict or when queue is empty
+
+**Error handling:**
+- If no tasks in queue: "Merge queue is empty. No tasks to merge."
+- If merge script fails: "Merge failed for task {id}. Check {repo_path} for issues."
+
+### 7. Retry Task
+
+**User input patterns:**
+- "Retry task `<id>`"
+- "Restart task `<id>`"
+
+**Workflow:**
+1. **Validate:**
+   - Task exists
+   - Task status is "failed"
+   - Current in_progress tasks < max_parallel_tasks
+
+2. **Reset task state:**
+   - Set status to "todo"
+   - Clear `assigned_at`, `completed_at`, `error`, `worktree_path`, and `merge_status` fields
+   - Clear existing `branch` name (will be recreated on assignment)
+   - Save `tasks.json`
+
+3. **Notify user:**
+   - Confirm task has been reset to "todo" status
+   - Suggest using "Assign task {id}" to retry
+
+**Error handling:**
+- If task doesn't exist: "Task {id} not found."
+- If task isn't failed: "Task {id} is {current_status}. Can only retry tasks with 'failed' status."
+- If at max parallel tasks: "Already running {count} tasks. Wait for one to complete before retrying."
+
+## File Management
+
+### tasks.json Structure
+```json
+{
+  "config": {
+    "max_parallel_tasks": 3
+  },
+  "next_id": 1,
+  "tasks": [
+    {
+      "id": 1,
+      "repo": "joetey.com",
+      "repo_path": "/Users/josephtey/Projects/joetey.com",
+      "spec_file": "tasks/1/spec.md",
+      "log_file": "tasks/1/agent.log",
+      "title": "Add dark mode toggle",
+      "status": "todo",
+      "branch": null,
+      "agent_id": null,
+      "worktree_path": null,
+      "merge_status": null,
+      "created_at": "2026-01-31T10:30:00Z",
+      "assigned_at": null,
+      "completed_at": null,
+      "error": null
+    }
+  ]
+}
+```
+
+### worktrees.json Structure
+```json
+{
+  "worktrees": [
+    {
+      "task_id": 3,
+      "repo": "joetey.com",
+      "repo_path": "/Users/josephtey/Projects/joetey.com",
+      "worktree_path": "/Users/josephtey/Projects/joetey.com-task-3",
+      "branch": "feature/task-3",
+      "created_at": "2026-02-01T10:00:00Z",
+      "status": "active"
+    }
+  ]
+}
+```
+
+### merge-queue.json Structure
+```json
+{
+  "config": {
+    "auto_merge": false,
+    "run_tests_before_merge": false
+  },
+  "queue": [
+    {
+      "task_id": 1,
+      "branch": "feature/task-1",
+      "status": "waiting",
+      "queued_at": "2026-02-01T10:05:00Z",
+      "error": null
+    }
+  ]
+}
+```
+
+### Directory Structure
+```
+agent-dashboard/
+├── tasks/
+│   ├── 1/
+│   │   ├── spec.md          # Task specification
+│   │   └── agent.log        # Agent execution log (created when assigned)
+│   ├── 2/
+│   │   ├── spec.md
+│   │   └── agent.log
+│   └── ...
+├── scripts/
+│   ├── init-worktree.sh     # Create git worktree for task
+│   ├── cleanup-worktree.sh  # Remove git worktree
+│   └── process-merge-queue.sh # Merge branch to main
+├── tasks.json               # Task state database
+├── worktrees.json           # Active worktree registry
+├── merge-queue.json         # Merge queue coordination
+├── repos.json               # Repository configuration
+└── CLAUDE.md                # This file
+```
+
+### Repository Path Resolution
+
+Repository configuration is stored in `repos.json`.
+
+**When creating a task:**
+1. Read `repos.json` to find the repository by name
+2. If found, use the stored path and main_branch
+3. If not found:
+   - Check if `/Users/josephtey/Projects/{repo-name}` exists
+   - If yes, add it to repos.json automatically
+   - If no, ask user: "What is the full path to the {repo} repository?"
+   - Store in repos.json for future use
+
+**Adding a new repository:**
+When user provides a path, add entry to repos.json:
+```json
+{
+  "name": "repo-name",
+  "path": "/full/path/to/repo",
+  "description": "Optional description",
+  "main_branch": "main"  // or "master", detect from git
+}
+```
+
+## Best Practices
+
+1. **Always read before write**: Read `tasks.json` before modifying to ensure data consistency
+2. **Atomic updates**: Update task state immediately before/after major operations
+3. **Clear communication**: Confirm each operation with the user
+4. **Error recovery**: Provide clear error messages and suggest fixes
+5. **Parallel execution with isolation**: Allow up to max_parallel_tasks concurrent tasks using git worktrees for complete isolation
+6. **Spec clarity**: Generate detailed, actionable specifications for sub-agents
+7. **Manual merge review**: Never auto-merge; always require user to review and explicitly merge via "Process merge queue"
+
+## State Transitions
+
+```
+TODO → IN_PROGRESS (via assign command)
+IN_PROGRESS → COMPLETED (via sub-agent success)
+IN_PROGRESS → FAILED (via sub-agent error)
+```
+
+Invalid transitions should be rejected with clear error messages.
+
+## Sub-Agent Monitoring
+
+When a sub-agent is spawned:
+1. Store the task ID from the Task tool
+2. Monitor for completion using TaskOutput if needed
+3. Update task status based on result
+4. Notify user when task completes or fails
+
+## Session Initialization
+
+When the user first launches Claude Code in this directory, automatically:
+
+1. Read `repos.json` to get available repositories
+2. Read `tasks.json` to get current task state
+3. **Display available commands and state:**
+   ```
+   Agent Dashboard CLI
+
+   Available commands:
+   • Create task for <repo>: <title>. <description> (enters plan mode)
+   • List tasks
+   • Show task <id>
+   • Assign task <id>
+   • Assign tasks <id1>, <id2>, <id3> (parallel execution)
+   • Process merge queue
+   • Retry task <id>
+
+   Available repositories:
+   - repo1
+   - repo2
+
+   Current status:
+   - {X} total tasks
+   - {Y} in progress
+   - {Z} completed
+   ```
+
+4. If any task is "in_progress", alert user and show task details
+
+This ensures users know what commands are available, which repos they can use, and the current system state.
+
+## Important Notes
+
+- Do NOT automatically merge branches - user reviews and merges manually via "Process merge queue"
+- Do NOT modify the target repository directly - only via sub-agents in worktrees
+- Allow up to max_parallel_tasks (default: 3) concurrent tasks using git worktrees for isolation
+- Always preserve existing tasks.json, worktrees.json, and merge-queue.json data when updating
+- Generate comprehensive specs - sub-agents need clear instructions
+- Clean up worktrees after task completion (success or failure)
+- Add completed tasks to merge queue for user review before merging

@@ -1,0 +1,10 @@
+{
+  "repositories": [
+    {
+      "name": "joetey.com",
+      "path": "/Users/josephtey/Projects/joetey.com",
+      "description": "Personal website",
+      "main_branch": "main"
+    }
+  ]
+}

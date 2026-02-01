@@ -1,0 +1,7 @@
+{
+  "config": {
+    "auto_merge": false,
+    "run_tests_before_merge": false
+  },
+  "queue": []
+}
