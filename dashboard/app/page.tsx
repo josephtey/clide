@@ -63,9 +63,12 @@ export default function Dashboard() {
               </div>
               <Skeleton className="h-5 w-96" />
             </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-6 w-40" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3 w-20" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-6 w-40" />
+              </div>
             </div>
           </header>
 
@@ -102,12 +105,15 @@ export default function Dashboard() {
           </div>
 
           {repositories.length > 0 && (
-            <div className="flex gap-2">
-              {repositories.map((repo) => (
-                <Badge key={repo.name} variant="secondary" className="font-mono">
-                  {repo.name}
-                </Badge>
-              ))}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground">Repositories</p>
+              <div className="flex gap-2">
+                {repositories.map((repo) => (
+                  <Badge key={repo.name} variant="secondary" className="font-mono">
+                    {repo.name}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
         </header>
