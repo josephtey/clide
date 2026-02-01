@@ -5,6 +5,7 @@ import { Task } from '@/lib/schemas'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
+import { Loader2 } from 'lucide-react'
 
 interface TaskCardProps {
   task: Task
@@ -22,7 +23,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       case 'todo':
         return 'bg-slate-100 text-slate-700 hover:bg-slate-200'
       case 'in_progress':
-        return 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+        return 'bg-blue-100 text-blue-700 hover:bg-blue-200 animate-pulse'
       case 'completed':
         return 'bg-green-100 text-green-700 hover:bg-green-200'
       case 'failed':
@@ -50,9 +51,14 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     >
       <CardHeader className="pb-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-semibold leading-tight">
-            #{task.id} {task.title}
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            {task.status === 'in_progress' && (
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            )}
+            <CardTitle className="text-sm font-semibold leading-tight">
+              #{task.id} {task.title}
+            </CardTitle>
+          </div>
           <Badge className={getStatusColor(task.status)}>
             {getStatusLabel(task.status)}
           </Badge>

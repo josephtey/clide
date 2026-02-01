@@ -5,7 +5,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Copy, Terminal } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Copy, Terminal, Loader2 } from 'lucide-react'
 import { Task } from '@/lib/schemas'
 
 interface LogViewerProps {
@@ -20,16 +21,25 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<'spec' | 'logs'>('spec')
   const [viewMode, setViewMode] = useState<'conversation' | 'raw'>('conversation')
+  const [isLoadingSpec, setIsLoadingSpec] = useState(true)
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Fetch spec file
   useEffect(() => {
     if (!open) return
 
+    setIsLoadingSpec(true)
     fetch(`/api/tasks/${task.id}/spec`)
       .then(res => res.text())
-      .then(setSpec)
-      .catch(() => setSpec(''))
+      .then(data => {
+        setSpec(data)
+        setIsLoadingSpec(false)
+      })
+      .catch(() => {
+        setSpec('')
+        setIsLoadingSpec(false)
+      })
   }, [task.id, open])
 
   const copyToClipboard = () => {
@@ -96,7 +106,10 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
     lines.forEach((line) => {
       try {
         const entry = JSON.parse(line)
-        entries.push(entry)
+        // Filter out progress entries
+        if (entry.type !== 'progress') {
+          entries.push(entry)
+        }
       } catch {
         // Skip malformed lines
       }
@@ -113,55 +126,123 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
 
       // Extract message content
       let messageContent = ''
+      let contentBlocks: any[] = []
+
       if (entry.message) {
         if (typeof entry.message === 'string') {
           messageContent = entry.message
         } else if (entry.message.content) {
-          messageContent = entry.message.content
+          // Content can be a string or an array of blocks
+          if (typeof entry.message.content === 'string') {
+            messageContent = entry.message.content
+          } else if (Array.isArray(entry.message.content)) {
+            contentBlocks = entry.message.content
+            // Extract text content from text blocks
+            const textBlocks = contentBlocks.filter(block => block.type === 'text')
+            messageContent = textBlocks.map(block => block.text).join('\n\n')
+          }
         }
       }
 
+      // Extract all metadata fields (excluding message and type)
+      const metadata = { ...entry }
+      delete metadata.message
+      delete metadata.type
+      const hasMetadata = Object.keys(metadata).length > 0
+
       return (
         <div key={idx} className="mb-4 pb-4 border-b border-slate-800 last:border-0 last:mb-0">
-          {/* Header with metadata */}
+          {/* Header with role badge */}
           <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
-                isUser ? 'bg-blue-500/20 text-blue-300' :
-                isAssistant ? 'bg-purple-500/20 text-purple-300' :
-                'bg-slate-700 text-slate-400'
-              }`}>
-                {entry.message?.role || messageType}
-              </span>
-
-              {entry.agentId && (
-                <span className="text-[10px] font-mono text-slate-500">
-                  agent: {entry.agentId.slice(0, 7)}
-                </span>
-              )}
-
-              {entry.sessionId && (
-                <span className="text-[10px] font-mono text-slate-600">
-                  session: {entry.sessionId.slice(0, 8)}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 text-[10px] text-slate-600">
-              {entry.cwd && (
-                <span className="font-mono">{entry.cwd.split('/').pop()}</span>
-              )}
-              {entry.gitBranch && (
-                <span className="font-mono">git:{entry.gitBranch}</span>
-              )}
-            </div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${
+              isUser ? 'bg-blue-500/20 text-blue-300' :
+              isAssistant ? 'bg-purple-500/20 text-purple-300' :
+              'bg-slate-700 text-slate-400'
+            }`}>
+              {entry.message?.role || messageType}
+            </span>
           </div>
 
           {/* Message content */}
           {messageContent && (
-            <div className="text-sm leading-relaxed text-slate-200 pl-1">
+            <div className="text-sm leading-relaxed text-slate-200 pl-1 mb-3">
               {renderMarkdown(messageContent)}
             </div>
+          )}
+
+          {/* Content blocks (tool uses, etc.) */}
+          {contentBlocks.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {contentBlocks.map((block, blockIdx) => {
+                if (block.type === 'text') {
+                  // Already handled above
+                  return null
+                }
+
+                if (block.type === 'tool_use') {
+                  return (
+                    <details key={blockIdx} className="group">
+                      <summary className="cursor-pointer text-xs font-mono select-none list-none flex items-center gap-2 px-3 py-2 bg-slate-900 rounded border border-slate-700 hover:border-slate-600">
+                        <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                        <span className="text-amber-400 font-semibold">{block.name}</span>
+                        <span className="text-slate-500">#{block.id?.slice(-8)}</span>
+                      </summary>
+                      <div className="mt-2 ml-4">
+                        <pre className="p-3 bg-slate-950 rounded border border-slate-800 text-[11px] text-slate-300 overflow-x-auto font-mono">
+{JSON.stringify(block.input, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  )
+                }
+
+                if (block.type === 'tool_result') {
+                  return (
+                    <details key={blockIdx} className="group">
+                      <summary className="cursor-pointer text-xs font-mono select-none list-none flex items-center gap-2 px-3 py-2 bg-slate-900 rounded border border-slate-700 hover:border-slate-600">
+                        <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                        <span className="text-green-400 font-semibold">Result</span>
+                        <span className="text-slate-500">#{block.tool_use_id?.slice(-8)}</span>
+                        {block.is_error && <span className="text-red-400 text-[10px]">ERROR</span>}
+                      </summary>
+                      <div className="mt-2 ml-4">
+                        <pre className="p-3 bg-slate-950 rounded border border-slate-800 text-[11px] text-slate-300 overflow-x-auto font-mono max-h-96 overflow-y-auto">
+{typeof block.content === 'string' ? block.content : JSON.stringify(block.content, null, 2)}
+                        </pre>
+                      </div>
+                    </details>
+                  )
+                }
+
+                // Other block types
+                return (
+                  <details key={blockIdx} className="group">
+                    <summary className="cursor-pointer text-xs font-mono select-none list-none flex items-center gap-2 px-3 py-2 bg-slate-900 rounded border border-slate-700 hover:border-slate-600">
+                      <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                      <span className="text-slate-400">{block.type}</span>
+                    </summary>
+                    <div className="mt-2 ml-4">
+                      <pre className="p-3 bg-slate-950 rounded border border-slate-800 text-[11px] text-slate-300 overflow-x-auto font-mono">
+{JSON.stringify(block, null, 2)}
+                      </pre>
+                    </div>
+                  </details>
+                )
+              })}
+            </div>
+          )}
+
+          {/* JSON Metadata */}
+          {hasMetadata && (
+            <details className="mt-2 group">
+              <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-400 font-mono select-none list-none flex items-center gap-2">
+                <span className="inline-block transition-transform group-open:rotate-90">▶</span>
+                Metadata
+              </summary>
+              <pre className="mt-2 p-3 bg-slate-900 rounded border border-slate-800 text-[11px] text-slate-300 overflow-x-auto font-mono">
+{JSON.stringify(metadata, null, 2)}
+              </pre>
+            </details>
           )}
         </div>
       )
@@ -180,11 +261,13 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
   useEffect(() => {
     if (!open) return
 
+    setIsLoadingLogs(true)
     const eventSource = new EventSource(`/api/logs/${task.id}/stream`)
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data)
       setLogs(data.content)
+      setIsLoadingLogs(false)
 
       // Auto-scroll to bottom
       setTimeout(() => {
@@ -196,6 +279,7 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
 
     eventSource.onerror = () => {
       console.error('SSE connection error')
+      setIsLoadingLogs(false)
       eventSource.close()
     }
 
@@ -283,7 +367,18 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
         <ScrollArea ref={scrollRef} className="h-[calc(100vh-200px)] mt-6">
           {activeTab === 'spec' ? (
             <div className="rounded-lg border border-slate-200 bg-white p-6">
-              {spec ? (
+              {isLoadingSpec ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-6 w-1/2 mt-6" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </div>
+              ) : spec ? (
                 <div className="prose prose-sm max-w-none">
                   {renderMarkdown(spec)}
                 </div>
@@ -293,7 +388,12 @@ export function LogViewer({ task, open, onClose }: LogViewerProps) {
             </div>
           ) : (
             <div className="rounded-lg border border-slate-800 bg-slate-950 text-slate-50 p-6">
-              {logs ? (
+              {isLoadingLogs ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  <p className="text-sm text-slate-400">Loading agent logs...</p>
+                </div>
+              ) : logs ? (
                 viewMode === 'conversation' ? parseConversationView() : parseRawView()
               ) : (
                 <div className="text-slate-400 italic text-center py-8">No logs yet...</div>
