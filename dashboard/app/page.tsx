@@ -18,12 +18,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Info } from 'lucide-react'
 
+interface Worktree {
+  task_id: number
+  repo: string
+  repo_path: string
+  worktree_path: string
+  branch: string
+  created_at: string
+  status: string
+}
+
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [config, setConfig] = useState({ max_parallel_tasks: 3 })
   const [repositories, setRepositories] = useState<Repository[]>([])
+  const [worktrees, setWorktrees] = useState<Worktree[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Fetch repositories
@@ -32,6 +43,14 @@ export default function Dashboard() {
       .then((res) => res.json())
       .then((data) => setRepositories(data.repositories))
       .catch((err) => console.error('Failed to fetch repos:', err))
+  }, [])
+
+  // Fetch worktrees
+  useEffect(() => {
+    fetch('/api/worktrees')
+      .then((res) => res.json())
+      .then((data) => setWorktrees(data.worktrees))
+      .catch((err) => console.error('Failed to fetch worktrees:', err))
   }, [])
 
   // Subscribe to real-time updates
@@ -197,16 +216,69 @@ export default function Dashboard() {
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-muted-foreground">Repositories</p>
                 <div className="flex gap-2">
-                  {repositories.map((repo) => (
-                    <Badge key={repo.name} variant="secondary" className="font-mono">
-                      {repo.name}
-                    </Badge>
-                  ))}
+                  {repositories.map((repo) => {
+                    // Generate consistent color for each repo using better hash
+                    let hash = 0
+                    for (let i = 0; i < repo.name.length; i++) {
+                      hash = ((hash << 5) - hash) + repo.name.charCodeAt(i)
+                      hash = hash & hash // Convert to 32bit integer
+                    }
+                    const colors = [
+                      'bg-blue-100 text-blue-700 border-blue-200',
+                      'bg-purple-100 text-purple-700 border-purple-200',
+                      'bg-green-100 text-green-700 border-green-200',
+                      'bg-orange-100 text-orange-700 border-orange-200',
+                      'bg-pink-100 text-pink-700 border-pink-200',
+                      'bg-indigo-100 text-indigo-700 border-indigo-200',
+                      'bg-teal-100 text-teal-700 border-teal-200',
+                      'bg-rose-100 text-rose-700 border-rose-200',
+                    ]
+                    const colorClass = colors[Math.abs(hash) % colors.length]
+
+                    return (
+                      <Badge
+                        key={repo.name}
+                        variant="outline"
+                        className={`font-mono ${colorClass} hover:opacity-80`}
+                      >
+                        {repo.name}
+                      </Badge>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </div>
         </header>
+
+        {worktrees.filter(w => w.status === 'active').length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Active Worktrees</h2>
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
+              <div className="space-y-3">
+                {worktrees.filter(w => w.status === 'active').map((worktree) => (
+                  <div key={worktree.task_id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-xs">
+                        Task #{worktree.task_id}
+                      </Badge>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{worktree.branch}</p>
+                        <p className="text-xs text-muted-foreground">{worktree.repo}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground font-mono">{worktree.worktree_path}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Created {new Date(worktree.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Lab Students</h2>

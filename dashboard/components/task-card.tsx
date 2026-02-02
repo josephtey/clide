@@ -53,19 +53,23 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   }
 
   const getRepoColor = (repo: string) => {
-    // Generate consistent color for each repo using simple hash
-    const hash = repo.split('').reduce((acc, char) => char.charCodeAt(0) + acc, 0)
+    // Generate consistent color for each repo using better hash
+    let hash = 0
+    for (let i = 0; i < repo.length; i++) {
+      hash = ((hash << 5) - hash) + repo.charCodeAt(i)
+      hash = hash & hash // Convert to 32bit integer
+    }
     const colors = [
-      { bg: 'bg-blue-500', text: 'text-blue-50' },
-      { bg: 'bg-purple-500', text: 'text-purple-50' },
-      { bg: 'bg-green-500', text: 'text-green-50' },
-      { bg: 'bg-orange-500', text: 'text-orange-50' },
-      { bg: 'bg-pink-500', text: 'text-pink-50' },
-      { bg: 'bg-indigo-500', text: 'text-indigo-50' },
-      { bg: 'bg-teal-500', text: 'text-teal-50' },
-      { bg: 'bg-rose-500', text: 'text-rose-50' },
+      { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
+      { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
+      { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
+      { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' },
+      { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-200' },
+      { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
+      { bg: 'bg-teal-100', text: 'text-teal-700', border: 'border-teal-200' },
+      { bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200' },
     ]
-    return colors[hash % colors.length]
+    return colors[Math.abs(hash) % colors.length]
   }
 
   const repoColor = getRepoColor(task.repo)
