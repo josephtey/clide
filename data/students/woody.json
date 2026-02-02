@@ -1,0 +1,13 @@
+{
+  "name": "Woody",
+  "role": "Systems Architect",
+  "focus": "Mastering agent harness design and infrastructure",
+  "repo": "beyond-agents",
+  "context": {
+    "decisions": [],
+    "learnings": [],
+    "project_state": "Building out agent harness features",
+    "last_updated": null
+  },
+  "task_history": []
+}

@@ -4,22 +4,24 @@ import { useEffect, useState } from 'react'
 import { Task, TasksFile, Repository } from '@/lib/schemas'
 import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
+import { StudentViewer } from '@/components/student-viewer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Info } from 'lucide-react'
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [config, setConfig] = useState({ max_parallel_tasks: 3 })
   const [repositories, setRepositories] = useState<Repository[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -104,7 +106,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto p-6 pt-12">
+      <div className="container mx-auto p-6 pt-12 pb-16">
         <div className="absolute top-6 right-6">
           <Dialog>
             <DialogTrigger asChild>
@@ -114,22 +116,66 @@ export default function Dashboard() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Philosophy</DialogTitle>
-                <DialogDescription className="pt-4 space-y-4 text-left">
+                <DialogTitle>About Clide</DialogTitle>
+              </DialogHeader>
+              <Tabs defaultValue="philosophy" className="mt-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="philosophy">Philosophy</TabsTrigger>
+                  <TabsTrigger value="vision">Future Vision</TabsTrigger>
+                </TabsList>
+                <TabsContent value="philosophy" className="space-y-4 text-left mt-4">
                   <p className="text-base text-foreground leading-relaxed">
-                    <strong>Think of Clide as your personal research lab.</strong> You're the principal investigator, orchestrating experiments across multiple projects. Each agent is running a hypothesis you want to test.
+                    <strong>The best learning environment is a scientific lab—and the person who benefits most is the PI.</strong> Think of Clide as your personal research lab. You're the principal investigator, orchestrating experiments across multiple projects. Each agent is running a hypothesis you want to test.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
                     The best engineers have sharp product instinct and architectural taste. But that traditionally took <em>years</em> of building to develop. Now, every task you delegate is a learning opportunity compressed into minutes instead of weeks.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
+                    PIs develop exceptional judgment through constant conversation—dozens of discussions daily about problems, approaches, and tradeoffs. They get incredibly good at "grokking" hard ideas quickly. <strong>What if your learning came from conversations with student agents?</strong> Each planning session, each architectural discussion, each iteration—compressed learning at scale.
+                  </p>
+                  <p className="text-base text-foreground leading-relaxed">
                     <strong>The workflow:</strong> Trust your gut. Spin up agents to explore different approaches. See what works. Build intuition faster than ever before.
                   </p>
                   <p className="text-base text-foreground leading-relaxed">
-                    This isn't just about shipping faster — it's about becoming a better builder, faster. Your agents do the grunt work. You accumulate the wisdom.
+                    This isn't just about shipping faster — it's about becoming a better builder, faster. Your agents do the grunt work. You accumulate the wisdom. <strong>Now everyone can become a professor.</strong>
                   </p>
-                </DialogDescription>
-              </DialogHeader>
+                </TabsContent>
+                <TabsContent value="vision" className="space-y-4 text-left mt-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    The roadmap for Clide is about evolving from a task orchestrator to a true learning environment—where students aren't just executing tasks, but becoming collaborators in your growth as a builder.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <input type="checkbox" disabled className="mt-1" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Daily conversations, not just tasks</p>
+                        <p className="text-sm text-muted-foreground">Wake up and talk to students. Not about executing—about ideas, approaches, tradeoffs. 15 minutes with each student daily.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <input type="checkbox" disabled className="mt-1" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Students propose their own ideas</p>
+                        <p className="text-sm text-muted-foreground">They develop intuition and suggest experiments. You evaluate at a high level. True collaboration, not just delegation.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <input type="checkbox" disabled className="mt-1" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Accountability through expectation</p>
+                        <p className="text-sm text-muted-foreground">Set learning intentions and project goals. Students expect progress. They keep you engaged, grounded in reality while they build.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <input type="checkbox" disabled className="mt-1" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Persistent memory and decision logs</p>
+                        <p className="text-sm text-muted-foreground">Each student maintains context across weeks—project end states, decision rationale, accumulated learnings. A living record of how they think and evolve.</p>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
@@ -137,29 +183,9 @@ export default function Dashboard() {
         <header className="mb-8">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">Clide</h1>
-                <div className="flex items-center gap-2">
-                  {groupedTasks.in_progress.length > 0 ? (
-                    <>
-                      <div className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                      </div>
-                      <p className="text-sm font-medium">
-                        LIVE • {groupedTasks.in_progress.length} {groupedTasks.in_progress.length === 1 ? 'AGENT' : 'AGENTS'} RUNNING
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-3 w-3 rounded-full bg-slate-300"></div>
-                      <p className="text-sm font-medium text-muted-foreground">AT REST</p>
-                    </>
-                  )}
-                </div>
-              </div>
+              <h1 className="text-3xl font-bold mb-2">Clide</h1>
               <p className="text-muted-foreground">
-                A next-gen scientific lab for building
+                Your personal research lab
               </p>
               <p className="text-sm text-muted-foreground mt-1">
                 {tasks.length} total tasks • {groupedTasks.in_progress.length} running •{' '}
@@ -186,29 +212,59 @@ export default function Dashboard() {
           <h2 className="text-sm font-semibold text-slate-900 mb-3 uppercase tracking-wide">Lab Students</h2>
           <div className="bg-white rounded-lg border border-slate-200 p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <h3 className="font-semibold text-slate-900">Alex</h3>
-                  <span className="text-xs text-slate-500">Product Builder</span>
+              <div className="flex flex-col cursor-pointer hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors" onClick={() => setSelectedStudent('Grace')}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Grace</h3>
+                  <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                  <span className="text-xs text-slate-500">At rest</span>
                 </div>
+                <p className="text-xs text-slate-500 mb-2">Product Builder</p>
                 <p className="text-sm text-slate-600">
                   Building a shared context layer for teams. Exploring how headless MCP tools can create a shared notebook where everyone's AI agents contribute and learn together.
                 </p>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <h3 className="font-semibold text-slate-900">Jordan</h3>
-                  <span className="text-xs text-slate-500">Systems Architect</span>
+              <div className="flex flex-col cursor-pointer hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors" onClick={() => setSelectedStudent('Woody')}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Woody</h3>
+                  {groupedTasks.in_progress.filter(t => t.repo === 'beyond-agents').length > 0 ? (
+                    <>
+                      <div className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </div>
+                      <span className="text-xs text-green-600 font-medium">Working</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                      <span className="text-xs text-slate-500">At rest</span>
+                    </>
+                  )}
                 </div>
+                <p className="text-xs text-slate-500 mb-2">Systems Architect</p>
                 <p className="text-sm text-slate-600">
                   Mastering agent harness design and infrastructure. Building out <span className="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">beyond-agents</span> with cutting-edge harness features.
                 </p>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <h3 className="font-semibold text-slate-900">Sam</h3>
-                  <span className="text-xs text-slate-500">Floating Researcher</span>
+              <div className="flex flex-col cursor-pointer hover:bg-slate-50 rounded-lg p-3 -m-3 transition-colors" onClick={() => setSelectedStudent('Rio')}>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-slate-900">Rio</h3>
+                  {groupedTasks.in_progress.filter(t => t.repo === 'joetey.com').length > 0 ? (
+                    <>
+                      <div className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </div>
+                      <span className="text-xs text-green-600 font-medium">Working</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-2 w-2 rounded-full bg-slate-300"></div>
+                      <span className="text-xs text-slate-500">At rest</span>
+                    </>
+                  )}
                 </div>
+                <p className="text-xs text-slate-500 mb-2">Floating Researcher</p>
                 <p className="text-sm text-slate-600">
                   Still exploring research directions. Occasionally helps with <span className="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded">joetey.com</span> and other lab needs while finding their focus area.
                 </p>
@@ -227,6 +283,14 @@ export default function Dashboard() {
             task={selectedTask}
             open={!!selectedTask}
             onClose={() => setSelectedTask(null)}
+          />
+        )}
+
+        {selectedStudent && (
+          <StudentViewer
+            studentName={selectedStudent}
+            open={!!selectedStudent}
+            onClose={() => setSelectedStudent(null)}
           />
         )}
       </div>

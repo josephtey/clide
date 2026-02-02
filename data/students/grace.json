@@ -1,0 +1,13 @@
+{
+  "name": "Grace",
+  "role": "Product Builder",
+  "focus": "Building a shared context layer for teams",
+  "repo": null,
+  "context": {
+    "decisions": [],
+    "learnings": [],
+    "project_state": "Exploring initial concepts for shared context MCP product",
+    "last_updated": null
+  },
+  "task_history": []
+}
