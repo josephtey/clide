@@ -79,11 +79,11 @@ export default function Dashboard() {
   }, [])
 
   const groupedTasks = {
-    todo: tasks.filter(t => t.status === 'todo'),
-    in_progress: tasks.filter(t => t.status === 'in_progress'),
-    staging: tasks.filter(t => t.status === 'staging'),
-    completed: tasks.filter(t => t.status === 'completed'),
-    failed: tasks.filter(t => t.status === 'failed'),
+    todo: tasks.filter(t => t.status === 'todo').sort((a, b) => b.id - a.id),
+    in_progress: tasks.filter(t => t.status === 'in_progress').sort((a, b) => b.id - a.id),
+    staging: tasks.filter(t => t.status === 'staging').sort((a, b) => b.id - a.id),
+    completed: tasks.filter(t => t.status === 'completed').sort((a, b) => b.id - a.id),
+    failed: tasks.filter(t => t.status === 'failed').sort((a, b) => b.id - a.id),
   }
 
   if (isLoading) {
