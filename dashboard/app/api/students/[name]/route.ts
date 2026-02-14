@@ -4,10 +4,10 @@ import path from 'path'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { name: string } }
+  { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    const { name } = params
+    const { name } = await params
     const filePath = path.join(process.cwd(), '..', 'data', 'students', `${name}.json`)
 
     if (!fs.existsSync(filePath)) {
