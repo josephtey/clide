@@ -77,69 +77,68 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <TooltipProvider>
       <Card
-        className="cursor-pointer hover:shadow-lg transition-all hover:border-slate-300 dark:hover:border-slate-600 overflow-hidden"
+        className="cursor-pointer hover:shadow-lg transition-all hover:border-slate-300 dark:hover:border-slate-600 overflow-hidden h-full flex flex-col"
         onClick={onClick}
       >
         {/* Colored repo header */}
-        <div className={`${repoColor} px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide`}>
+        <div className={`${repoColor} px-3 py-1 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0`}>
           {task.repo}
         </div>
 
-        <CardHeader className="pb-3 space-y-2">
+        <div className="flex-1 flex flex-col min-h-0 p-3 space-y-2">
+          {/* Timestamp and duration */}
           {task.assigned_at && mounted && (
-            <div className="text-xs text-muted-foreground">
-              {format(new Date(task.assigned_at), 'MMM d, h:mm a')} • ran for {getDuration()}
+            <div className="text-[10px] text-muted-foreground flex-shrink-0">
+              {format(new Date(task.assigned_at), 'MMM d, h:mm a')} • {getDuration()}
             </div>
           )}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {task.status === 'in_progress' && (
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              )}
-              {task.status === 'staging' && (
-                <div className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400 flex-shrink-0" title="Ready for review" />
-              )}
-              <CardTitle className="text-sm font-semibold leading-tight">
-                #{task.id} {task.title}
-              </CardTitle>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-1.5 text-xs text-muted-foreground">
-            {task.branch && (
-              <div className="flex items-center gap-1">
-                <span className="font-medium">Branch:</span>
-                <span className="font-mono flex-1 truncate">{task.branch}</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={handleCopyBranch}
-                    >
-                      {copied ? (
-                        <Check className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{copied ? 'Copied!' : 'Copy branch name'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
 
-            {task.error && (
-              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/30 rounded text-red-700 dark:text-red-300">
-                <span className="font-medium">Error:</span> {task.error}
-              </div>
+          {/* Title with status indicator */}
+          <div className="flex items-start gap-2 flex-1 min-h-0">
+            {task.status === 'in_progress' && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             )}
+            {task.status === 'staging' && (
+              <div className="h-2 w-2 rounded-full bg-amber-500 dark:bg-amber-400 flex-shrink-0 mt-1" title="Ready for review" />
+            )}
+            <h3 className="text-sm font-semibold leading-tight line-clamp-2">
+              #{task.id} {task.title}
+            </h3>
           </div>
-        </CardContent>
+
+          {/* Branch info */}
+          {task.branch && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0">
+              <span className="font-mono truncate flex-1">{task.branch}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 flex-shrink-0"
+                    onClick={handleCopyBranch}
+                  >
+                    {copied ? (
+                      <Check className="h-2.5 w-2.5 text-green-600" />
+                    ) : (
+                      <Copy className="h-2.5 w-2.5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">{copied ? 'Copied!' : 'Copy'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+
+          {/* Error */}
+          {task.error && (
+            <div className="text-[10px] p-2 bg-red-50 dark:bg-red-900/30 rounded text-red-700 dark:text-red-300 flex-shrink-0">
+              <span className="font-medium">Error:</span> {task.error}
+            </div>
+          )}
+        </div>
       </Card>
     </TooltipProvider>
   )

@@ -6,6 +6,7 @@ import { KanbanBoard } from '@/components/kanban-board'
 import { LogViewer } from '@/components/log-viewer'
 import { StudentViewer } from '@/components/student-viewer'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { ProductivityTracker } from '@/components/productivity-tracker'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -324,7 +325,7 @@ export default function Dashboard() {
               <div className="flex flex-col cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg p-3 -m-3 transition-colors" onClick={() => setSelectedStudent('Rio')}>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-slate-900 dark:text-slate-100">Rio</h3>
-                  {groupedTasks.in_progress.filter(t => t.repo === 'joetey.com').length > 0 ? (
+                  {groupedTasks.in_progress.filter(t => t.repo === 'rosalind').length > 0 ? (
                     <>
                       <div className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 dark:bg-green-500 opacity-75"></span>
@@ -339,13 +340,17 @@ export default function Dashboard() {
                     </>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Floating Researcher</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Bio-AI Researcher</p>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Still exploring research directions. Occasionally helps with <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">joetey.com</span> and other lab needs while finding their focus area.
+                  Building <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">Rosalind</span> - LLM agents for protein design and biological discovery. Using mechanistic interpretability to ground agent reasoning in real biology, not just pattern matching.
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <ProductivityTracker tasks={tasks} />
         </div>
 
         <KanbanBoard
