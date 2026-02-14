@@ -17,6 +17,17 @@
       "path": "/Users/josephtey/Projects/cortex",
       "description": "Shared context layer for AI teams",
       "main_branch": "main"
+    },
+    {
+      "name": "rosalind",
+      "path": "/home/joetey/rosalind",
+      "description": "GPU cluster project",
+      "main_branch": "main",
+      "remote": {
+        "enabled": true,
+        "ssh_host": "chimera-login",
+        "type": "cluster"
+      }
     }
   ]
 }

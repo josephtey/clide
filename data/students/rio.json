@@ -1,10 +1,60 @@
 {
   "name": "Rio",
-  "role": "Floating Researcher",
-  "focus": "Exploring research directions",
-  "repo": "joetey.com",
+  "role": "Bio-AI Researcher",
+  "focus": "Building Rosalind - LLM agents for protein design and biological discovery",
+  "repo": "rosalind",
   "context": {
+    "project_vision": {
+      "core_thesis": "The next frontier in computational biology is agents that can reason over and interact with interpretable biological world models. Not just better bio FMs, but agents that use mechanistically transparent models to propose experiments, interpret results, and iterate on hypotheses.",
+      "unique_angle": "DNA LMs + mech interp → grounded agents. Use SAE-based interpretability to ground agent reasoning in mechanistic understanding vs pattern matching. This addresses the 33%+ hallucination rates plaguing current scientific agents.",
+      "critical_gap": "No current systems use mech interp to guide agent reasoning in real-time. Most agent systems don't use mechanistic interpretability for grounding - it's post-hoc analysis, not integrated into decision-making loops.",
+      "connection_to_evo3": "Evo 3 is building the biological world model. SAEs on genomic models make it interpretable. Rosalind is the agent layer that uses interpretable features to ground reasoning.",
+      "workflow_vision": "Agent proposes hypothesis → queries DNA LM → uses SAE features to understand WHY the model predicts → validates mechanistic consistency → executes → learns from results. Creates feedback loop: better interpretability → better grounded agents → better science.",
+      "inspiration": "Arc + Goodfire already built SAE-based interpretability tools for Evo 2. This validates the direction. We're extending it to agent decision-making."
+    },
     "decisions": [
+      {
+        "task_id": null,
+        "decision": "Chose attention head screening workflow over single-pass tasks (contact prediction, structure prediction)",
+        "rationale": "Agents excel at multi-step exploration, not single forward passes. Screening workflow requires iterative analysis (which heads? which patterns?), comparison across clusters, and decision-making (which is most promising?). This leverages agent capabilities.",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": null,
+        "decision": "Focus first workflow on protein-DNA interactions, not protein structure",
+        "rationale": "Protein-DNA interactions (transposase→TIRs) are less saturated than structure prediction. Attention heads might reveal binding patterns that MSA misses. More aligned with discovery angle than benchmarking.",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": null,
+        "decision": "Use Gwanggyu's IS element data as test case for first workflow",
+        "rationale": "Perfect dataset: related sequences (same transposase family), known biology (TIRs, target sites), clear protein-DNA interactions. Multiple clusters enable screening/ranking approach.",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": 11,
+        "decision": "Built decorator-based tool system for Rosalind SDK",
+        "rationale": "Decorator pattern makes it trivial to register functions as agent tools - just @tool decorator. Automatic schema generation from type hints and docstrings means no manual tool definition boilerplate. Critical for rapid iteration when adding bio FM tools.",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "decision": "Used Typer + Rich for CLI instead of raw argparse",
+        "rationale": "Typer provides modern, type-safe CLI with automatic help generation. Rich adds beautiful terminal UI (colors, spinners, formatting) which matters for scientific workflows where agents may take time to reason.",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "decision": "Chose Opus 4.6 (claude-opus-4-6) as default model",
+        "rationale": "Most capable model for complex scientific reasoning. 1M token context window enables working with large genomic sequences and research papers. Worth the cost ($5/$25 per million tokens) for protein design applications.",
+        "timestamp": "2026-02-13T00:25:00Z"
+      },
+      {
+        "task_id": 11,
+        "decision": "Implemented tool calling loop directly in agent class, not external orchestrator",
+        "rationale": "Keeps agent logic self-contained. Tool use → execution → result formatting is core agent behavior, shouldn't be separated. Simplifies debugging and makes agent behavior more transparent.",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
       {
         "task_id": 8,
         "decision": "Used `marked` library for markdown parsing over heavier alternatives like react-markdown",
@@ -38,6 +88,54 @@
     ],
     "learnings": [
       {
+        "task_id": null,
+        "learning": "IS elements (insertion sequences) are mobile genetic elements with transposase genes flanked by terminal inverted repeats (TIRs). Transposase binds to TIRs for transposition - clear protein-DNA interaction.",
+        "context": "Exploring Gwanggyu's data for first Rosalind workflow - understanding the biology behind the test case",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": null,
+        "learning": "Attention heads in genomic LMs might capture long-range interactions (like TIRs at sequence ends) that MSA-based methods miss, especially for divergent sequences with low conservation.",
+        "context": "Discussing why attention heads could reveal protein-DNA binding patterns better than traditional alignment",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": null,
+        "learning": "Screening/ranking approach (comparing multiple datasets to find best one) is more valuable than benchmarking (comparing methods on fixed dataset). Guides where to focus experimental validation.",
+        "context": "Designing first workflow - realized screening provides actionable output (which system to study) vs just method comparison",
+        "timestamp": "2026-02-13T01:00:00Z"
+      },
+      {
+        "task_id": 11,
+        "learning": "Anthropic tool schema format: Uses JSON Schema for input_schema with type, properties, required fields. Must extract from Python function signatures using inspect module.",
+        "context": "Building tool decorator for Rosalind - need to convert Python functions to Anthropic's expected format for tool use",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "learning": "Tool calling loop pattern: Must maintain message history with tool_use blocks and tool_result blocks. Continue loop until response contains text block without tool_use.",
+        "context": "Implementing RosalindAgent.chat() - critical to handle multi-step tool use correctly",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "learning": "Python-dotenv must be loaded explicitly: Use load_dotenv() at module import to read .env files. Environment variables aren't automatically loaded.",
+        "context": "Configuration management for API keys - prevent users from manually exporting env vars",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "learning": "pyproject.toml [project.scripts] creates CLI entry points: Mapping 'rosalind = rosalind.cli:app' makes the command available after pip install",
+        "context": "Setting up CLI - modern Python packaging replaces old setup.py console_scripts",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
+        "task_id": 11,
+        "learning": "Remote cluster work requires SSH wrapping: All file reads, writes, and commands must be executed via 'ssh host \"cd path && command\"' pattern",
+        "context": "Building on chimera-login cluster - learned importance of proper SSH command structure for remote development",
+        "timestamp": "2026-02-13T00:18:00Z"
+      },
+      {
         "task_id": 8,
         "learning": "Body background management: Must store original document.body.style.backgroundColor value before modification to ensure proper cleanup",
         "context": "Implemented dark mode isolation for stream page - critical for preventing style bleed to other pages",
@@ -66,17 +164,66 @@
         "learning": "Animation staggering: Using delay: index * 0.05 in Framer Motion creates pleasing cascading effect",
         "context": "Implemented entry animations for stream page - small delay multiplier prevents overwhelming simultaneous animations",
         "timestamp": "2026-02-05T15:05:00Z"
+      },
+      {
+        "task_id": 13,
+        "learning": "PI strongly prefers minimal, scannable documentation. Reduced README from 538 to 146 lines (73% reduction) - removed verbose explanations, kept only essential info (what, how to install, basic usage).",
+        "context": "Condensed Rosalind README per PI request ('readme is just too long'). This aligns with broader taste for minimalism seen across other projects.",
+        "timestamp": "2026-02-14T09:00:00Z"
       }
     ],
-    "project_state": "Built hidden stream page feature with dark aesthetic, keyboard shortcut access, and Obsidian sync integration. Refined to add bidirectional 's' key navigation and ultra-minimal empty state. Exploring personal site architecture patterns.",
-    "last_updated": "2026-02-05T15:30:00Z",
-    "conversations": []
+    "project_state": "Built Rosalind SDK foundation (task 11). Cleaned up README to be much more scannable (task 13). Identified first workflow: attention head screening tool for protein-DNA interactions. Will process IS element clusters (transposase sequences from Gwanggyu's data) to find which shows strongest protein→DNA attention signals. Agent will rank clusters and identify most promising for studying transposase-TIR binding.",
+    "last_updated": "2026-02-14T09:05:00Z",
+    "conversations": [
+      {
+        "timestamp": "2026-02-13T00:30:00Z",
+        "duration_minutes": 30,
+        "summary": "Brainstormed first Rosalind workflow. Rejected single-pass tasks (contact prediction) in favor of multi-step agent workflow. Decided on attention head screening: process multiple IS element clusters to find which shows strongest protein-DNA interaction signals for downstream study.",
+        "key_topics": [
+          "Attention heads for co-evolutionary information",
+          "Why agents need multi-step tasks",
+          "Protein-DNA interactions in transposase systems",
+          "IS element data structure and biology",
+          "Screening workflow design"
+        ],
+        "action_items": [
+          "Build attention head screening tool",
+          "Process IS element clusters (IS3_tnp, IS21_tnp, etc.)",
+          "Rank by protein→DNA attention strength",
+          "Identify most promising cluster for validation"
+        ],
+        "new_learnings": [
+          "Single-pass tasks (contact prediction) don't leverage agent capabilities - need multi-step exploration",
+          "Attention heads from genomic LMs might capture protein-DNA binding patterns (transposase→TIRs)",
+          "IS elements are good test case: related sequences, known biology, protein-DNA interactions",
+          "Screening approach (ranking clusters) more valuable than benchmarking on single dataset"
+        ]
+      }
+    ]
   },
   "task_history": [
     {
       "task_id": 8,
       "title": "Build Hidden Stream Page",
       "completed_at": "2026-02-05T15:05:00Z",
+      "outcome": "success"
+    },
+    {
+      "task_id": 10,
+      "title": "Uncomment Navigation Bar in joetey.com",
+      "completed_at": "2026-02-13T00:05:00Z",
+      "outcome": "success"
+    },
+    {
+      "task_id": 11,
+      "title": "Set Up Rosalind Agent SDK and CLI",
+      "completed_at": "2026-02-13T00:18:00Z",
+      "outcome": "success"
+    },
+    {
+      "task_id": 13,
+      "title": "Shorten Rosalind README",
+      "completed_at": "2026-02-14T09:00:00Z",
       "outcome": "success"
     }
   ]
