@@ -12,6 +12,123 @@ You are operating a centralized task management system that orchestrates Claude 
 4. Spawn and monitor sub-agents for task execution in background
 5. Stream and log agent output to `tasks/{id}/agent.log`
 
+## Remote Repository Support
+
+Clide supports both local and remote repositories. Remote repositories (e.g., on GPU clusters) are accessed via SSH.
+
+### Detecting Remote Repositories
+
+When reading `data/repos.json`, check if a repository has the `remote` field:
+
+```json
+{
+  "name": "rosalind",
+  "path": "/home/joetey/rosalind",
+  "remote": {
+    "enabled": true,
+    "ssh_host": "chimera-gpu-agent",
+    "type": "cluster"
+  }
+}
+```
+
+If `remote.enabled` is `true`, all operations for this repository must be executed via SSH.
+
+### SSH Command Execution
+
+For remote repositories, wrap all Bash commands with SSH:
+
+**Pattern:** `ssh {ssh_host} 'cd {repo_path} && {command}'`
+
+**Examples:**
+- Local: `git status`
+- Remote: `ssh chimera-gpu-agent 'cd /home/joetey/rosalind && git status'`
+
+**Important:**
+- Always `cd` to the repository path first in the SSH command
+- Use single quotes to prevent local shell expansion
+- Chain multiple commands with `&&` in a single SSH call when possible to reduce latency
+
+### File Operations on Remote Repos
+
+When working with remote repositories, file operations must be executed via SSH:
+
+**Reading files:**
+```bash
+ssh chimera-gpu-agent 'cat /home/joetey/rosalind/README.md'
+```
+
+**Writing files:**
+```bash
+ssh chimera-gpu-agent 'cat > /home/joetey/rosalind/file.txt' <<'EOF'
+file contents here
+EOF
+```
+
+**Grep:**
+```bash
+ssh chimera-gpu-agent 'cd /home/joetey/rosalind && grep -r "pattern" .'
+```
+
+**Glob/Find:**
+```bash
+ssh chimera-gpu-agent 'cd /home/joetey/rosalind && find . -name "*.py"'
+```
+
+### Sub-Agent Prompts for Remote Repos
+
+When spawning sub-agents for remote repositories, include special instructions:
+
+```markdown
+IMPORTANT - REMOTE REPOSITORY:
+This repository is located on a remote GPU cluster. All operations must be executed via SSH.
+
+SSH Host: {ssh_host}
+Repository Path: {repo_path}
+
+ALL Bash commands must use this pattern:
+ssh {ssh_host} 'cd {repo_path} && YOUR_COMMAND_HERE'
+
+Examples:
+- Check status: ssh {ssh_host} 'cd {repo_path} && git status'
+- Run tests: ssh {ssh_host} 'cd {repo_path} && pytest tests/'
+- Install deps: ssh {ssh_host} 'cd {repo_path} && pip install -r requirements.txt'
+
+For file operations:
+- Read: ssh {ssh_host} 'cat {repo_path}/file.py'
+- Write: ssh {ssh_host} 'cat > {repo_path}/file.py' <<'EOF'
+  [content]
+  EOF
+
+CRITICAL: Never execute commands locally for this repository. Always use SSH.
+You have full access to the cluster's GPU resources for training, testing, etc.
+```
+
+### Git Worktrees on Remote Repos
+
+Git worktrees for remote repos are created on the remote machine:
+
+**In `scripts/init-worktree.sh`:**
+- Detect if repo is remote by checking `data/repos.json`
+- If remote, execute git worktree commands via SSH:
+  ```bash
+  ssh {ssh_host} 'cd {repo_path} && git worktree add -b {branch} {worktree_path}'
+  ```
+- Return the worktree path (which will be a remote path)
+
+**In `scripts/cleanup-worktree.sh`:**
+- If remote, cleanup via SSH:
+  ```bash
+  ssh {ssh_host} 'cd {repo_path} && git worktree remove {worktree_path}'
+  ```
+
+### Remote Repo Benefits
+
+- **GPU Access**: Sub-agents can leverage cluster GPUs for training, inference, etc.
+- **Large Datasets**: Work with datasets that exist only on the cluster
+- **Cluster Resources**: Use cluster-specific tools, environments, libraries
+- **No Local Sync**: No need to download/sync large repos locally
+
 ## Command Patterns
 
 ### 1. Create Task
@@ -719,6 +836,148 @@ Claude: Switching back from Grace's perspective...
 - If student name invalid: "Student not found. Available students: Grace, Woody, Rio."
 - If student context file missing: "Student context file not found at data/students/{name}.json."
 
+### 11. Let It Rip Mode (Fast Track)
+
+**User input patterns:**
+
+- "Let it rip: `<repo-name>`: `<title>`. `<description>`"
+- "Fast track: `<repo-name>`: `<title>`. `<description>`"
+- "Quick task: `<repo-name>`: `<title>`. `<description>`"
+
+**Purpose:**
+
+Fast-track mode for simple, straightforward tasks that don't require planning or staging. Creates, executes, and merges the task in one go.
+
+**When to use:**
+
+- Simple bug fixes (typos, small corrections)
+- Uncomment/comment code
+- Add simple logging or debug statements
+- Update documentation
+- Rename files or variables
+- Add simple configuration
+- Any task that's obvious and low-risk
+
+**When NOT to use:**
+
+- New features requiring design decisions
+- Refactoring or architectural changes
+- Tasks affecting multiple components
+- Anything requiring user input or clarification
+- Complex bug fixes
+- Tasks where multiple approaches exist
+
+**Workflow:**
+
+1. **Validate:**
+
+   - Repository exists
+   - Description is clear and actionable
+   - Task is simple enough for fast-track (use judgment)
+   - Current in_progress tasks < max_parallel_tasks
+
+2. **Create minimal spec:**
+
+   - Get next task ID from data/tasks.json
+   - Create directory `tasks/{id}/`
+   - Write minimal spec to `tasks/{id}/spec.md` based directly on user's description
+   - No plan mode, no conversation - just translate the user's prompt into a structured spec
+
+   **Minimal spec format:**
+   ```markdown
+   # Task #{id}: {title}
+
+   **Repository:** {repo}
+   **Mode:** Fast Track
+   **Created:** {timestamp}
+
+   ## Description
+
+   {user's description expanded slightly}
+
+   ## Implementation
+
+   {brief bullet points of what needs to be done}
+
+   ## Success Criteria
+
+   - Task completed as described
+   - No breaking changes
+   - Code follows repository conventions
+   ```
+
+3. **Register task:**
+
+   - Add task to data/tasks.json with status "in_progress" (skip "todo")
+   - Increment next_id
+   - Set created_at and assigned_at to same timestamp
+
+4. **Create worktree and assign immediately:**
+
+   - Run scripts/init-worktree.sh
+   - Add entry to data/worktrees.json
+   - Update task with worktree_path and branch
+
+5. **Spawn sub-agent:**
+
+   - Use Task tool with subagent_type="general-purpose"
+   - Run in FOREGROUND
+   - Provide straightforward prompt:
+     - Task description
+     - Repository and worktree paths
+     - Student context (assigned student for repo)
+     - Instruction to implement, test, commit, and push
+     - Note that this is a fast-track task (simple and straightforward)
+
+6. **Auto-progression on success:**
+
+   - If agent succeeds:
+     - Update status to "staging"
+     - Immediately update status to "completed"
+     - Add to merge queue with status "waiting"
+     - Set merge_status to "waiting"
+     - Cleanup worktree
+     - Process merge queue automatically
+   - If agent fails:
+     - Update status to "failed"
+     - Cleanup worktree
+     - Report error to user
+
+7. **Notify user:**
+   - On success: "Task {id} completed and merged via fast-track! Branch feature/task-{id} merged to main."
+   - On failure: "Fast-track task {id} failed. Error: {error}. Use 'Retry task {id}' or create a proper task for this."
+
+**Example:**
+
+```
+User: Let it rip: joetey.com: Fix typo in README. Change "teh" to "the" in line 42.
+
+Claude:
+1. Creates task #15 with minimal spec
+2. Assigns to Rio (joetey.com owner)
+3. Spawns agent to fix typo
+4. Agent commits and pushes
+5. Auto-approves and merges
+6. "Task 15 completed and merged via fast-track!"
+
+Total time: ~30 seconds instead of ~5 minutes with full workflow
+```
+
+**Important notes:**
+
+- Skip plan mode entirely - trust the user's description
+- Skip staging/review - merge directly on success
+- Only for tasks where you're confident of the approach
+- If in doubt, use regular "Create task" with planning instead
+- Update student context even for fast-track tasks
+
+**Error handling:**
+
+- If task is too complex for fast-track: "This task seems complex. Use 'Create task' with planning instead."
+- If description is unclear: "Please provide more details. Fast-track requires clear, specific instructions."
+- If repository doesn't exist: "Repository {repo} not found."
+- If max parallel tasks reached: "Already running {count} tasks. Wait for completion or use regular workflow."
+
 ## File Management
 
 ### data/tasks.json Structure
@@ -997,6 +1256,136 @@ Use AI to analyze the log and extract structured context. Be thorough - this bui
 5. **Parallel execution with isolation**: Allow up to max_parallel_tasks concurrent tasks using git worktrees for complete isolation
 6. **Spec clarity**: Generate detailed, actionable specifications for sub-agents
 7. **Manual merge review**: Never auto-merge; always require user to review and explicitly merge via "Process merge queue"
+8. **Close the loop with testing**: Always verify frontend implementations and bug fixes with Playwright tests
+
+## Testing and Verification
+
+### When to Use Playwright Testing
+
+**ALWAYS use Playwright to test and verify:**
+1. **Frontend implementations** - Any task that creates or modifies a web UI
+2. **Bug fixes** - When refining tasks to fix reported issues
+3. **User-facing features** - Chat interfaces, forms, interactive components
+4. **Before approval** - Test tasks in staging to verify they work as expected
+
+### Playwright Testing Workflow
+
+**1. Write a Test Script**
+Create a focused test that:
+- Navigates to the application
+- Interacts with the UI (click, type, etc.)
+- Captures console logs and network requests
+- Takes screenshots for debugging
+- Verifies expected behavior
+
+**Example test structure:**
+```javascript
+const { chromium } = require('playwright');
+
+async function testFeature() {
+  const browser = await chromium.launch({ headless: false });
+  const page = await browser.newPage();
+
+  // Capture logs and errors
+  page.on('console', msg => console.log(`[${msg.type()}] ${msg.text()}`));
+
+  // Test the feature
+  await page.goto('http://localhost:3000');
+  await page.locator('input').fill('test message');
+  await page.locator('button').click();
+
+  // Wait and verify
+  await page.waitForTimeout(5000);
+  const hasResult = await page.locator('text=/expected/i').count() > 0;
+
+  // Screenshot
+  await page.screenshot({ path: '/tmp/test-result.png' });
+
+  await browser.close();
+  return hasResult;
+}
+```
+
+**2. Run Tests for Bug Reports**
+When a user reports something "not working":
+- Ask them to describe the issue
+- Write a Playwright test that reproduces the problem
+- Run the test to confirm the bug
+- Use test output to diagnose the root cause
+- Fix the issue
+- Re-run the test to verify the fix
+
+**3. Verify Before Approval**
+Before approving a task (moving from staging to completed):
+- Write tests for core functionality
+- Verify all features work as expected
+- Check for console errors or warnings
+- Ensure UI displays correctly
+- Test edge cases
+
+### Test Output Analysis
+
+Playwright tests provide critical debugging information:
+- **Console logs** - Shows JS errors, API calls, state updates
+- **Network logs** - Reveals failed requests, response data
+- **Screenshots** - Visual verification of UI state
+- **DOM queries** - Confirms elements are rendered
+
+Use this information to:
+1. **Identify root cause** - Console errors, failed network requests
+2. **Verify fixes** - Elements that were missing now appear
+3. **Document issues** - Screenshot evidence for refinements
+
+### Installing Playwright
+
+When first using Playwright in a session:
+```bash
+cd /tmp
+npm init -y
+npm install playwright
+npx playwright install chromium
+```
+
+Then run tests:
+```bash
+node test-script.js
+```
+
+### Best Practices for Testing
+
+1. **Test early** - Don't wait for user complaints, test proactively
+2. **Test thoroughly** - Cover happy path and edge cases
+3. **Capture everything** - Console logs, network, screenshots
+4. **Non-headless first** - Use `headless: false` to watch behavior
+5. **Generous timeouts** - Wait long enough for async operations
+6. **Close the loop** - Always verify fixes with a re-test
+
+### Example: Bug Fix Workflow
+
+```
+1. User reports: "Messages not appearing"
+2. Write Playwright test that sends a message
+3. Run test → Confirms bug (no messages visible)
+4. Analyze test output:
+   - Console: "✅ Event parsed"
+   - Network: "200 OK"
+   - DOM: Text found but not visible
+   - Diagnosis: CSS/rendering issue
+5. Spawn refinement agent with detailed findings
+6. Agent fixes the issue
+7. Re-run Playwright test → Confirms fix works
+8. Approve and merge with confidence
+```
+
+### Integration with Refinement Workflow
+
+When refining tasks:
+1. **Before refinement**: Run Playwright test to reproduce the issue
+2. **Document findings**: Include test output in refinement prompt
+3. **After refinement**: Re-run test to verify the fix
+4. **Approve only if**: Tests pass and functionality is confirmed
+
+This closes the loop and ensures high-quality implementations.
 
 ## State Transitions
 
